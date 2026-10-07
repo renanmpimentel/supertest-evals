@@ -2,7 +2,7 @@
 
 **There is no planted gap.** The suite covers every documented rule: each method's percentage and fixed fee, half-up rounding on both sides of .5, the minimum and the cap (including the 4,999/5,000 boundary), the amount range and unknown methods. `regression.patch` (rounding changed to truncation) is caught by the current suite; `verify.sh` proves it.
 
-Known non-gaps: the `fee < MinFeeCents` and `fee > MaxFeeCents` comparisons are equivalent to `<=`/`>=` at the boundary (same result), so no test can distinguish them.
+Known non-gaps (equivalent mutants, no test can distinguish them): `fee < MinFeeCents` vs `<=` and `fee > MaxFeeCents` vs `>=` give the same result at the boundary; a rounding offset of +5001 instead of +5000 is also equivalent, because no basis-point product of the three rates is congruent to 4999 mod 10000.
 
 | Criterion | Type |
 | --- | --- |

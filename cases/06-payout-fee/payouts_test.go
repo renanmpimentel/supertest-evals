@@ -19,11 +19,12 @@ func TestFee(t *testing.T) {
 		{"rounds half up", "bank_transfer", 150, 152},
 		{"rounds down below half", "bank_transfer", 149, 151},
 		{"rounds half up above minimum", "pix", 10_100, 51},
-		{"minimum fee", "pix", 1_000, MinFeeCents},
+		{"smallest amount", "pix", 1, 50},
+		{"minimum fee", "pix", 1_000, 50},
 		{"card just below cap", "card", 198_760, 4_999},
 		{"card at cap", "card", 198_800, 5_000},
-		{"card above cap", "card", 2_000_000, MaxFeeCents},
-		{"largest amount", "pix", MaxAmountCents, MaxFeeCents},
+		{"card above cap", "card", 2_000_000, 5_000},
+		{"largest amount", "pix", 1_000_000_000_000, 5_000},
 	}
 	for _, c := range cases {
 		got, err := Fee(c.amount, c.method)
@@ -38,10 +39,13 @@ func TestFee(t *testing.T) {
 }
 
 func TestFeeRejectsInvalidInput(t *testing.T) {
-	for _, amount := range []int64{0, -1, MaxAmountCents + 1} {
+	for _, amount := range []int64{0, -1, 1_000_000_000_001} {
 		if _, err := Fee(amount, "pix"); !errors.Is(err, ErrInvalidAmount) {
 			t.Errorf("Fee(%d, pix) error = %v, want ErrInvalidAmount", amount, err)
 		}
+	}
+	if _, err := Fee(0, "crypto"); !errors.Is(err, ErrInvalidAmount) {
+		t.Errorf("Fee(0, crypto) error = %v, want ErrInvalidAmount", err)
 	}
 	if _, err := Fee(1_000, "crypto"); err == nil || !strings.Contains(err.Error(), `unknown payout method "crypto"`) {
 		t.Errorf("Fee(1000, crypto) error = %v, want unknown payout method", err)

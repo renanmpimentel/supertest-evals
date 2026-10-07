@@ -11,4 +11,5 @@
 - The percentage part is rounded half up to whole cents, then the fixed fee is added.
 - The result is clamped to at least `MinFeeCents` (50) and at most `MaxFeeCents` (5,000).
 - `amountCents` must be between 1 and `MaxAmountCents` (1,000,000,000,000); otherwise `ErrInvalidAmount`.
+- The amount is validated before the method.
 - An unknown method returns an error naming the method.
