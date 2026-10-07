@@ -1,0 +1,13 @@
+--- a/payments.go
++++ b/payments.go
+@@ -64,10 +64,6 @@
+ 		http.Error(w, "could not save payment", http.StatusInternalServerError)
+ 		return
+ 	}
+-	if err := tx.Commit(); err != nil {
+-		http.Error(w, "could not save payment", http.StatusInternalServerError)
+-		return
+-	}
+ 
+ 	w.Header().Set("Content-Type", "application/json")
+ 	w.WriteHeader(http.StatusCreated)
