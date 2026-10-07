@@ -28,12 +28,12 @@ bash scripts/verify-all.sh     # proves the gap of every case
 
 The same checks run in GitHub Actions (`.github/workflows/verify.yml`), plus a check that `prepare-run.sh` never leaks the answer key.
 
-## Run the agent (manual protocol)
+## Run the agent
 
 **Avoid answer-key leakage.** The agent must not read `cases/*/_eval` (not even by absolute path) nor recover it through cross-project memory tools (for example, an MCP memory server that indexed the sessions in which the answer keys were written). Run the agent with such memory tools disabled or out of scope, from a directory outside this repository.
 
-1. `bash scripts/check-skill-version.sh` — the installed skill copy must match `SUPERTEST_VERSION`.
-2. Run the round: `bash scripts/run-round.sh <prompt> [case...]`, with `<prompt>` being `audit` or `ship` (the shared prompts live in `prompts/`). It first runs `scripts/check-skill-version.sh` (and again after the without-skill arm), then parks the installed skill machine-wide (outside `~/.claude/skills`) for the whole `without-skill` arm, so other Claude Code sessions on the machine lack it meanwhile; it restores the skill on exit, including on Ctrl-C. Env vars: `MODEL` (default `sonnet`), `MAX_PARALLEL` (default 3), `SUPERTEST_INSTALLED` (default `~/.claude/skills/supertest`). It prepares a fresh neutral copy per run, runs headless Claude Code in both arms and saves the evidence (`<arm>.md`, `<arm>.diff`, `<arm>.status`, `<arm>.hooks.txt`, `<arm>.transcript.jsonl`, `arms.txt`, `runs.log`) in `results/<date>-<sha>-<prompt>/<case>/`. The round-1 folder `results/2026-10-07-18a0c4a/` predates the prompt suffix and used `audit`.
+1. Optional: `bash scripts/check-skill-version.sh` checks beforehand that the installed skill copy matches `SUPERTEST_VERSION`; `run-round.sh` runs it anyway.
+2. Run the round: `bash scripts/run-round.sh <prompt> [case...]`, with `<prompt>` being `audit` or `ship` (the shared prompts live in `prompts/`). It first runs `scripts/check-skill-version.sh` (and again after the without-skill arm), then parks the installed skill machine-wide (outside `~/.claude/skills`) for the whole `without-skill` arm, so other Claude Code sessions on the machine lack it meanwhile; it restores the skill on exit, including on Ctrl-C. Env vars: `MODEL` (default `sonnet`), `MAX_PARALLEL` (default 3), `SUPERTEST_INSTALLED` (default `~/.claude/skills/supertest`). It prepares a fresh neutral copy per run, runs headless Claude Code in both arms and saves the evidence (`<arm>.md`, `<arm>.diff`, `<arm>.status`, `<arm>.hooks.txt`, `<arm>.transcript.jsonl`, `<arm>.stderr`, `arms.txt`, `runs.log`) in `results/<date>-<sha>-<prompt>/<case>/`. The round-1 folder `results/2026-10-07-18a0c4a/` predates the prompt suffix and used `audit`.
 
    Hooks from the user's Claude Code settings run in both arms (for comparability with round 1); `<arm>.hooks.txt` records each SessionStart hook's name, exit code and output. When grading, check it for injected memory or context beyond what both arms share. These files can contain private memory or context, so they are gitignored and stay local: graders read them locally and `grades.md` summarizes. The script exits non-zero if any run failed; see `runs.log` (`error=` names the failed steps).
 
@@ -43,7 +43,7 @@ The same checks run in GitHub Actions (`.github/workflows/verify.yml`), plus a c
 
    The criteria "does not change production code" and "runs a regression and restores" are graded on the diff, status and transcript, not only on the agent's report.
 3. Check each run independently: `bash scripts/check-agent-fix.sh results/<round> <case> <arm>`. It applies the agent's diff to a fresh copy and runs the case's whole suite on correct code (must pass) and with the reference regression (must fail by assertion, not by a build error).
-4. Grade each run against `cases/<case>/_eval/expected.md` (`pass`, `partial`, `fail`) and update the table below.
+4. Grade each run against `cases/<case>/_eval/expected.md` and update the table below: gap cases use `pass`, `partial` or `fail`; control cases use `pass`, `false positive` or `fail`.
 
 ## Results
 
