@@ -1,0 +1,3 @@
+without-skill /tmp/tmp.SK67tKbxZs/project
+with-skill-failed-attempt /tmp/tmp.92ysHz7Jcz/project
+with-skill /tmp/tmp.VkjFu8i3dq/project

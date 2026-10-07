@@ -43,7 +43,10 @@ The same checks run in GitHub Actions (`.github/workflows/verify.yml`), plus a c
 
 ## Results
 
-No runs recorded yet.
+| Date | Skill | Agent | Case | Without skill | With skill |
+| --- | --- | --- | --- | --- | --- |
+| 2026-10-07 | `18a0c4a` | Claude Code, sonnet | 01 idempotent charge | pass | pass |
+| 2026-10-07 | `18a0c4a` | Claude Code, sonnet | 02 circuit breaker | pass | pass |
+| 2026-10-07 | `18a0c4a` | Claude Code, sonnet | 03 payment persistence | pass | pass (no final report) |
 
-| Date | Skill | Case | Without skill | With skill |
-| --- | --- | --- | --- | --- |
+First round: the planted gaps did not separate the arms — the model found and proved them without the skill. With the skill, every run mutated an isolated copy instead of the project's production files. Details: [results/2026-10-07-18a0c4a/grades.md](results/2026-10-07-18a0c4a/grades.md).

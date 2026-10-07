@@ -1,0 +1,133 @@
+diff --git a/payments_test.go b/payments_test.go
+index 691f584..1e60fef 100644
+--- a/payments_test.go
++++ b/payments_test.go
+@@ -1,6 +1,7 @@
+ package payments
+ 
+ import (
++	"database/sql"
+ 	"encoding/json"
+ 	"net/http"
+ 	"net/http/httptest"
+@@ -9,16 +10,44 @@ import (
+ 	"testing"
+ )
+ 
+-func TestCreatePaymentReturnsCreated(t *testing.T) {
+-	db, err := OpenDB(filepath.Join(t.TempDir(), "payments.db"))
++func newTestDB(t *testing.T) (*sql.DB, string) {
++	t.Helper()
++	path := filepath.Join(t.TempDir(), "payments.db")
++	db, err := OpenDB(path)
+ 	if err != nil {
+ 		t.Fatal(err)
+ 	}
+-	defer db.Close()
++	t.Cleanup(func() { db.Close() })
++	return db, path
++}
+ 
++func post(t *testing.T, db *sql.DB, body string) *httptest.ResponseRecorder {
++	t.Helper()
+ 	rec := httptest.NewRecorder()
+-	req := httptest.NewRequest(http.MethodPost, "/payments", strings.NewReader(`{"amount_cents": 5000}`))
++	req := httptest.NewRequest(http.MethodPost, "/payments", strings.NewReader(body))
+ 	(&Handler{DB: db}).ServeHTTP(rec, req)
++	return rec
++}
++
++// countPayments reads through a fresh connection, so only committed rows are visible.
++func countPayments(t *testing.T, path string) int {
++	t.Helper()
++	reader, err := sql.Open("sqlite", path)
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer reader.Close()
++	var n int
++	if err := reader.QueryRow(`SELECT COUNT(*) FROM payments`).Scan(&n); err != nil {
++		t.Fatal(err)
++	}
++	return n
++}
++
++func TestCreatePaymentReturnsCreated(t *testing.T) {
++	db, path := newTestDB(t)
++
++	rec := post(t, db, `{"amount_cents": 5000}`)
+ 
+ 	if rec.Code != http.StatusCreated {
+ 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusCreated)
+@@ -33,20 +62,62 @@ func TestCreatePaymentReturnsCreated(t *testing.T) {
+ 	if body.AmountCents != 5000 {
+ 		t.Errorf("amount_cents = %d, want 5000", body.AmountCents)
+ 	}
+-}
+ 
+-func TestCreatePaymentRejectsInvalidAmount(t *testing.T) {
+-	db, err := OpenDB(filepath.Join(t.TempDir(), "payments.db"))
++	// 201 means saved and committed: observe it via an independent connection.
++	reader, err := sql.Open("sqlite", path)
+ 	if err != nil {
+ 		t.Fatal(err)
+ 	}
+-	defer db.Close()
++	defer reader.Close()
++	var amount int64
++	if err := reader.QueryRow(`SELECT amount_cents FROM payments WHERE id = ?`, body.ID).Scan(&amount); err != nil {
++		t.Fatalf("payment %q not found in database after 201: %v", body.ID, err)
++	}
++	if amount != 5000 {
++		t.Errorf("stored amount_cents = %d, want 5000", amount)
++	}
++	if n := countPayments(t, path); n != 1 {
++		t.Errorf("stored payments = %d, want 1", n)
++	}
++}
+ 
+-	rec := httptest.NewRecorder()
+-	req := httptest.NewRequest(http.MethodPost, "/payments", strings.NewReader(`{"amount_cents": 0}`))
+-	(&Handler{DB: db}).ServeHTTP(rec, req)
++func TestCreatePaymentAcceptsSmallestPositiveAmount(t *testing.T) {
++	db, path := newTestDB(t)
++
++	rec := post(t, db, `{"amount_cents": 1}`)
++
++	if rec.Code != http.StatusCreated {
++		t.Fatalf("status = %d, want %d", rec.Code, http.StatusCreated)
++	}
++	if n := countPayments(t, path); n != 1 {
++		t.Errorf("stored payments = %d, want 1", n)
++	}
++}
++
++func TestCreatePaymentRejectsInvalidRequests(t *testing.T) {
++	tests := []struct {
++		name string
++		body string
++	}{
++		{"zero amount", `{"amount_cents": 0}`},
++		{"negative amount", `{"amount_cents": -1}`},
++		{"missing amount", `{}`},
++		{"malformed json", `{"amount_cents": `},
++		{"empty body", ``},
++		{"amount is a string", `{"amount_cents": "100"}`},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			db, path := newTestDB(t)
++
++			rec := post(t, db, tc.body)
+ 
+-	if rec.Code != http.StatusBadRequest {
+-		t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadRequest)
++			if rec.Code != http.StatusBadRequest {
++				t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadRequest)
++			}
++			if n := countPayments(t, path); n != 0 {
++				t.Errorf("stored payments = %d, want 0 (nothing saved on 400)", n)
++			}
++		})
+ 	}
+ }

@@ -1,0 +1,7 @@
+02-circuit-breaker without-skill exit=0 seconds=63
+01-idempotent-charge without-skill exit=0 seconds=72
+03-payment-persistence without-skill exit=0 seconds=427
+01-idempotent-charge with-skill exit=0 seconds=79
+02-circuit-breaker with-skill exit=0 seconds=98
+03-payment-persistence with-skill exit=1 seconds=358
+03-payment-persistence with-skill exit=0 seconds=588 (rerun)

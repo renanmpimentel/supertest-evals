@@ -1,0 +1,97 @@
+diff --git a/payments_test.go b/payments_test.go
+index 691f584..b82c1f2 100644
+--- a/payments_test.go
++++ b/payments_test.go
+@@ -1,6 +1,7 @@
+ package payments
+ 
+ import (
++	"database/sql"
+ 	"encoding/json"
+ 	"net/http"
+ 	"net/http/httptest"
+@@ -50,3 +51,84 @@ func TestCreatePaymentRejectsInvalidAmount(t *testing.T) {
+ 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadRequest)
+ 	}
+ }
++
++func openTestDB(t *testing.T, path string) *sql.DB {
++	t.Helper()
++	db, err := OpenDB(path)
++	if err != nil {
++		t.Fatal(err)
++	}
++	t.Cleanup(func() { db.Close() })
++	return db
++}
++
++func countPayments(t *testing.T, db *sql.DB) int {
++	t.Helper()
++	var n int
++	if err := db.QueryRow(`SELECT COUNT(*) FROM payments`).Scan(&n); err != nil {
++		t.Fatal(err)
++	}
++	return n
++}
++
++func post(h http.Handler, body string) *httptest.ResponseRecorder {
++	rec := httptest.NewRecorder()
++	h.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/payments", strings.NewReader(body)))
++	return rec
++}
++
++// 201 means the payment is committed: it must be visible from a separate
++// connection (a fresh DB handle on the same file), not just the handler's own.
++func TestCreatePaymentIsPersistedAndCommitted(t *testing.T) {
++	path := filepath.Join(t.TempDir(), "payments.db")
++	db := openTestDB(t, path)
++
++	rec := post(&Handler{DB: db}, `{"amount_cents": 5000}`)
++	if rec.Code != http.StatusCreated {
++		t.Fatalf("status = %d, want %d", rec.Code, http.StatusCreated)
++	}
++	var body createResponse
++	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
++		t.Fatal(err)
++	}
++
++	other := openTestDB(t, path)
++	var amount int64
++	if err := other.QueryRow(`SELECT amount_cents FROM payments WHERE id = ?`, body.ID).Scan(&amount); err != nil {
++		t.Fatalf("payment %q not found in database after 201: %v", body.ID, err)
++	}
++	if amount != 5000 {
++		t.Errorf("stored amount_cents = %d, want 5000", amount)
++	}
++	if n := countPayments(t, other); n != 1 {
++		t.Errorf("payments rows = %d, want 1", n)
++	}
++}
++
++func TestCreatePaymentRejectsAndDoesNotSave(t *testing.T) {
++	cases := map[string]string{
++		"zero":                         `{"amount_cents": 0}`,
++		"negative":                     `{"amount_cents": -1}`,
++		"large negative":               `{"amount_cents": -5000}`,
++		"missing amount":               `{}`,
++		"malformed json":               `{"amount_cents": `,
++		"not json":                     `nope`,
++		"wrong type":                   `{"amount_cents": "100"}`,
++		"valid amount then type error": `{"amount_cents": 100, "amount_cents": "x"}`,
++		"empty body":                   ``,
++	}
++	for name, body := range cases {
++		t.Run(name, func(t *testing.T) {
++			path := filepath.Join(t.TempDir(), "payments.db")
++			db := openTestDB(t, path)
++
++			rec := post(&Handler{DB: db}, body)
++			if rec.Code != http.StatusBadRequest {
++				t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadRequest)
++			}
++			if n := countPayments(t, openTestDB(t, path)); n != 0 {
++				t.Errorf("payments rows = %d, want 0 (nothing saved on 400)", n)
++			}
++		})
++	}
++}

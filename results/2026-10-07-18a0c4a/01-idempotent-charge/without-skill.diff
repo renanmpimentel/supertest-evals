@@ -1,0 +1,38 @@
+diff --git a/tests/test_charge.py b/tests/test_charge.py
+index c194a06..527ac23 100644
+--- a/tests/test_charge.py
++++ b/tests/test_charge.py
+@@ -18,3 +18,33 @@ def test_same_key_returns_same_charge():
+     second = service.charge("key-1", 5000)
+     assert second["status"] == "succeeded"
+     assert second["id"] == first["id"]
++
++
++class CountingGateway:
++    """Returns a unique id per call and records every call."""
++
++    def __init__(self):
++        self.calls = []
++
++    def charge(self, amount_cents):
++        self.calls.append(amount_cents)
++        return "ch_%d" % len(self.calls)
++
++
++def test_same_key_charges_gateway_only_once():
++    gateway = CountingGateway()
++    service = ChargeService(gateway)
++    first = service.charge("key-1", 5000)
++    second = service.charge("key-1", 5000)
++    assert gateway.calls == [5000]
++    assert second == first
++
++
++def test_different_keys_create_different_charges():
++    gateway = CountingGateway()
++    service = ChargeService(gateway)
++    first = service.charge("key-1", 5000)
++    second = service.charge("key-2", 5000)
++    assert gateway.calls == [5000, 5000]
++    assert first == {"id": "ch_1", "amount_cents": 5000, "status": "succeeded"}
++    assert second == {"id": "ch_2", "amount_cents": 5000, "status": "succeeded"}

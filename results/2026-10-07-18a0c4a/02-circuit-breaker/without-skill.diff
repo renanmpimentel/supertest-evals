@@ -1,0 +1,86 @@
+diff --git a/tests/breaker.test.ts b/tests/breaker.test.ts
+index 9d2c6b9..1dca57d 100644
+--- a/tests/breaker.test.ts
++++ b/tests/breaker.test.ts
+@@ -1,4 +1,4 @@
+-import { describe, expect, it } from "vitest";
++import { describe, expect, it, vi } from "vitest";
+ import { FALLBACK_MESSAGE, GatewayBreaker } from "../src/breaker";
+ 
+ const unavailable = {
+@@ -7,6 +7,17 @@ const unavailable = {
+   },
+ };
+ 
++// Scripted gateway: each call consumes the next outcome ("ok" or an error message).
++function scripted(outcomes: string[]) {
++  const charge = vi.fn(async () => {
++    const next = outcomes.shift();
++    if (next === undefined) throw new Error("script exhausted");
++    if (next === "ok") return "ch_ok";
++    throw new Error(next);
++  });
++  return { charge };
++}
++
+ describe("GatewayBreaker", () => {
+   it("returns the charge id when the gateway succeeds", async () => {
+     const breaker = new GatewayBreaker({ charge: async () => "ch_1" }, 3);
+@@ -22,4 +33,57 @@ describe("GatewayBreaker", () => {
+     const result = await breaker.charge(1000);
+     expect(result).toEqual({ ok: false, message: FALLBACK_MESSAGE });
+   });
++
++  it("does not call the gateway while the circuit is open", async () => {
++    // Gateway error text differs from FALLBACK_MESSAGE so a leaked call is visible.
++    const gateway = scripted(["boom", "boom", "boom", "ok"]);
++    const breaker = new GatewayBreaker(gateway, 3);
++    for (let i = 0; i < 3; i += 1) {
++      await breaker.charge(1000);
++    }
++    expect(gateway.charge).toHaveBeenCalledTimes(3);
++
++    const result = await breaker.charge(1000);
++    expect(result).toEqual({ ok: false, message: FALLBACK_MESSAGE });
++    expect(gateway.charge).toHaveBeenCalledTimes(3);
++  });
++
++  it("stays closed below the threshold and returns the gateway error message", async () => {
++    const gateway = scripted(["boom 1", "boom 2", "ok"]);
++    const breaker = new GatewayBreaker(gateway, 3);
++
++    expect(await breaker.charge(1000)).toEqual({ ok: false, message: "boom 1" });
++    expect(breaker.isOpen()).toBe(false);
++    expect(await breaker.charge(1000)).toEqual({ ok: false, message: "boom 2" });
++    expect(breaker.isOpen()).toBe(false);
++
++    // Still closed: the third call reaches the gateway and can succeed.
++    expect(await breaker.charge(1000)).toEqual({ ok: true, chargeId: "ch_ok" });
++    expect(gateway.charge).toHaveBeenCalledTimes(3);
++  });
++
++  it("opens exactly at the threshold", async () => {
++    const breaker = new GatewayBreaker(scripted(["a", "b", "c", "d"]), 2);
++    await breaker.charge(1);
++    expect(breaker.isOpen()).toBe(false);
++    await breaker.charge(1);
++    expect(breaker.isOpen()).toBe(true);
++  });
++
++  it("counts only consecutive failures: a success resets the count", async () => {
++    const gateway = scripted(["f1", "f2", "ok", "f3", "f4", "ok"]);
++    const breaker = new GatewayBreaker(gateway, 3);
++
++    await breaker.charge(1000); // f1
++    await breaker.charge(1000); // f2
++    expect(await breaker.charge(1000)).toEqual({ ok: true, chargeId: "ch_ok" });
++    await breaker.charge(1000); // f3 (would be the 3rd failure overall)
++    expect(breaker.isOpen()).toBe(false);
++    await breaker.charge(1000); // f4
++    expect(breaker.isOpen()).toBe(false);
++
++    // Circuit never opened, so the gateway is still reached and succeeds.
++    expect(await breaker.charge(1000)).toEqual({ ok: true, chargeId: "ch_ok" });
++    expect(gateway.charge).toHaveBeenCalledTimes(6);
++  });
+ });
