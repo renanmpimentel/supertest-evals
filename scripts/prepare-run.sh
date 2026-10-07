@@ -21,5 +21,6 @@ git -C "$case_dir" ls-files -z -- . ':(exclude)_eval' | tar -C "$case_dir" --nul
 git -C "$dest" init -q -b main
 git -C "$dest" add -A
 git -C "$dest" -c user.name=supertest-evals -c user.email=evals@localhost commit -q -m baseline
+git -C "$dest" tag baseline
 echo "prepared $dest"
 echo "prompt: $case_dir/_eval/prompt.md"
