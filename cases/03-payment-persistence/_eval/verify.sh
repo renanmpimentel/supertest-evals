@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
-here="$(cd "$(dirname "$0")" && pwd)"
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$here/../../../scripts/lib/verify.sh"
 
 IMAGE="golang:1.27"
 SETUP="true"
 WEAK_CMD="go test -count=1 -v -run '^TestCreatePayment(ReturnsCreated|RejectsInvalidAmount)\$' ./..."
 STRONG_CMD="go test -count=1 -v -run '^TestCreatePaymentIsPersisted\$' ./..."
+SUITE_CMD="go test -count=1 -v ./..."
 STRONG_SRC="payments_strong_test.go"
 STRONG_DEST="payments_strong_test.go"
 PASS_RE='^--- PASS: '

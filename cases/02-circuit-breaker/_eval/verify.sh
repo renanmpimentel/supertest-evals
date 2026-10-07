@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
-here="$(cd "$(dirname "$0")" && pwd)"
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$here/../../../scripts/lib/verify.sh"
 
 IMAGE="node:24-slim"
 SETUP="npm ci --no-audit --no-fund --loglevel=error"
 WEAK_CMD="npx vitest run tests/breaker.test.ts"
 STRONG_CMD="npx vitest run tests/breaker.strong.test.ts"
+SUITE_CMD="npx vitest run"
 STRONG_SRC="breaker.strong.test.ts"
 STRONG_DEST="tests/breaker.strong.test.ts"
 PASS_RE='Tests +[0-9]+ passed'

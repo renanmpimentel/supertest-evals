@@ -7,6 +7,12 @@
 # The case's _eval/verify.sh sets IMAGE, SETUP, WEAK_CMD, STRONG_CMD,
 # STRONG_SRC, STRONG_DEST, PASS_RE, ASSERT_RE, ERROR_RE and DOCKER_ARGS,
 # then calls: verify_case <case dir>
+#
+# Control cases (tests already protect the contract) set TEST_CMD instead of
+# WEAK_CMD/STRONG_*, and call verify_control_case: original code passes,
+# regression fails by assertion. With VERIFY_DRY=1 both entry points return
+# immediately, so other scripts can source a case's verify.sh to read its
+# settings.
 
 WORK=""
 
@@ -23,7 +29,9 @@ make_workspace() {
   local case_dir="$1" dest="$2" with_regression="$3"
   mkdir -p "$dest"
   tar -C "$case_dir" --exclude=./_eval --exclude=./node_modules -cf - . | tar -C "$dest" -xf -
-  cp "$case_dir/_eval/$STRONG_SRC" "$dest/$STRONG_DEST"
+  if [[ -n "${STRONG_SRC:-}" ]]; then
+    cp "$case_dir/_eval/$STRONG_SRC" "$dest/$STRONG_DEST"
+  fi
   if [[ "$with_regression" == yes ]]; then
     if ! (cd "$dest" && git apply "$case_dir/_eval/regression.patch") 2>"$WORK/patch.log"; then
       fail "regression.patch does not apply to $(basename "$case_dir")" "$WORK/patch.log"
@@ -70,6 +78,7 @@ expect_assertion_failure() {
 }
 
 verify_case() {
+  [[ -n "${VERIFY_DRY:-}" ]] && return 0
   local case_dir
   case_dir="$(cd "$1" && pwd)"
   WORK="$(mktemp -d)"
@@ -83,4 +92,19 @@ verify_case() {
   expect_pass "regressed/weak" "$WORK/regressed" "$WEAK_CMD"
   expect_assertion_failure "regressed/strong" "$WORK/regressed" "$STRONG_CMD"
   echo "PASS gap proven: weak test misses the regression, strong test catches it"
+}
+
+verify_control_case() {
+  [[ -n "${VERIFY_DRY:-}" ]] && return 0
+  local case_dir
+  case_dir="$(cd "$1" && pwd)"
+  WORK="$(mktemp -d)"
+  trap 'rm -rf "$WORK"' EXIT
+  mkdir -p "$WORK/logs"
+  echo "case $(basename "$case_dir") (control)"
+  make_workspace "$case_dir" "$WORK/original" no
+  make_workspace "$case_dir" "$WORK/regressed" yes
+  expect_pass "original/current" "$WORK/original" "$TEST_CMD"
+  expect_assertion_failure "regressed/current" "$WORK/regressed" "$TEST_CMD"
+  echo "PASS control: current tests catch the regression"
 }

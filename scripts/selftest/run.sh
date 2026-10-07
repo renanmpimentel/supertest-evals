@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Self-test for scripts/lib/verify.sh: one valid case and six that must be rejected.
+# Self-test for scripts/lib/verify.sh: two valid cases and seven that must be rejected.
 set -euo pipefail
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 work="$(mktemp -d)"
@@ -41,6 +41,29 @@ verify_case "$dir"
 EOF
 }
 
+make_control_case() {
+  local name="$1" tests="$2" patch="$3"
+  local dir="$work/$name"
+  mkdir -p "$dir/tests" "$dir/_eval"
+  printf 'VALUE=1\n' > "$dir/app.sh"
+  printf '%s\n' "$tests" > "$dir/tests/current.sh"
+  printf '%s' "$patch" > "$dir/_eval/regression.patch"
+  cat > "$dir/_eval/verify.sh" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+source "$root/scripts/lib/verify.sh"
+IMAGE="alpine:3.20"
+SETUP="true"
+TEST_CMD="sh tests/current.sh"
+SUITE_CMD="sh tests/current.sh"
+PASS_RE='[0-9]+ passed'
+ASSERT_RE='^ASSERT:'
+ERROR_RE='^ERROR:'
+DOCKER_ARGS=()
+verify_control_case "$dir"
+EOF
+}
+
 expect_verify() {
   local name="$1" want="$2" pattern="$3"
   local out status=0
@@ -65,6 +88,8 @@ make_case empty-collection "$WEAK_EMPTY" "$STRONG_OK" "$PATCH_OK"
 make_case patch-drift "$WEAK_OK" "$STRONG_OK" "$PATCH_DRIFT"
 make_case strong-passes "$WEAK_OK" "$STRONG_PASSES" "$PATCH_OK"
 make_case no-marker "$WEAK_OK" "$STRONG_NO_MARKER" "$PATCH_OK"
+make_control_case control-good "$STRONG_OK" "$PATCH_OK"
+make_control_case control-misses "$WEAK_OK" "$PATCH_OK"
 
 expect_verify good pass 'PASS gap proven'
 expect_verify weak-catches fail 'regressed/weak: expected pass'
@@ -73,6 +98,8 @@ expect_verify empty-collection fail 'no passing test collected'
 expect_verify patch-drift fail 'regression.patch does not apply'
 expect_verify strong-passes fail 'expected failure, but tests passed'
 expect_verify no-marker fail 'no assertion marker'
+expect_verify control-good pass 'PASS control: current tests catch the regression'
+expect_verify control-misses fail 'regressed/current: expected failure, but tests passed'
 
 if [[ -e "$work/good/tests/strong.sh" ]]; then
   echo "SELFTEST FAIL good: verify wrote into the case directory"
