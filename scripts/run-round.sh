@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+# Runs one eval round: every selected case in both arms with headless Claude Code.
+# The without-skill arm parks the installed Supertest skill outside the skills
+# folder and restores it on exit. Usage: run-round.sh <prompt> [case...]
+# Env: MODEL (default sonnet), MAX_PARALLEL (default 3), SUPERTEST_INSTALLED.
+set -euo pipefail
+if [[ $# -lt 1 ]]; then
+  echo "usage: $0 <prompt> [case...]" >&2
+  exit 2
+fi
+root="$(cd "$(dirname "$0")/.." && pwd)"
+prompt_name="$1"
+shift
+prompt_file="$root/prompts/$prompt_name.md"
+if [[ ! -f "$prompt_file" ]]; then
+  echo "unknown prompt: $prompt_file" >&2
+  exit 2
+fi
+if (( $# )); then
+  cases=("$@")
+else
+  mapfile -t cases < <(find "$root/cases" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort)
+fi
+model="${MODEL:-sonnet}"
+max_parallel="${MAX_PARALLEL:-3}"
+skill="${SUPERTEST_INSTALLED:-$HOME/.claude/skills/supertest}"
+parked="$(dirname "$(dirname "$skill")")/supertest-skill-parked"
+sha="$(tr -d '[:space:]' < "$root/SUPERTEST_VERSION")"
+out="$root/results/$(date +%F)-$sha-$prompt_name"
+if [[ -e "$out" ]]; then
+  echo "results folder already exists: $out" >&2
+  exit 1
+fi
+bash "$root/scripts/check-skill-version.sh"
+
+restore_skill() {
+  if [[ -d "$parked" && ! -e "$skill" ]]; then
+    mv "$parked" "$skill"
+    echo "skill restored"
+  fi
+}
+trap restore_skill EXIT
+
+run_arm() {
+  local case="$1" arm="$2" prefix="$3"
+  local dir="$out/$case" copy status=0 start
+  copy="$(mktemp -d)/project"
+  bash "$root/scripts/prepare-run.sh" "$root/cases/$case" "$copy" >/dev/null
+  echo "$arm $copy" >> "$dir/arms.txt"
+  start=$(date +%s)
+  (cd "$copy" && timeout 2700 claude -p "${prefix}$(cat "$prompt_file")" --model "$model" \
+      --permission-mode bypassPermissions --strict-mcp-config --no-session-persistence \
+      --output-format stream-json --verbose \
+      > "$dir/$arm.transcript.jsonl" 2> "$dir/$arm.stderr") || status=$?
+  jq -r 'select(.type=="result") | .result // empty' "$dir/$arm.transcript.jsonl" > "$dir/$arm.md" || true
+  git -C "$copy" add -A
+  git -C "$copy" diff --cached baseline > "$dir/$arm.diff"
+  git -C "$copy" status --porcelain -uall > "$dir/$arm.status"
+  echo "$case $arm exit=$status seconds=$(( $(date +%s) - start ))" | tee -a "$out/runs.log"
+}
+
+run_all() {
+  local arm="$1" prefix="$2" running=0 case
+  for case in "${cases[@]}"; do
+    run_arm "$case" "$arm" "$prefix" &
+    running=$((running + 1))
+    if (( running >= max_parallel )); then
+      wait -n
+      running=$((running - 1))
+    fi
+  done
+  wait
+}
+
+mkdir -p "$out"
+: > "$out/runs.log"
+for case in "${cases[@]}"; do
+  mkdir -p "$out/$case"
+  : > "$out/$case/arms.txt"
+done
+
+echo "== without-skill"
+mv "$skill" "$parked"
+run_all without-skill ""
+restore_skill
+bash "$root/scripts/check-skill-version.sh"
+
+echo "== with-skill"
+run_all with-skill $'Load the Supertest skill.\n\n'
+echo "results: $out"

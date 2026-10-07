@@ -28,18 +28,11 @@ The same checks run in GitHub Actions (`.github/workflows/verify.yml`), plus a c
 **Avoid answer-key leakage.** The agent must not read `cases/*/_eval` (not even by absolute path) nor recover it through cross-project memory tools (for example, an MCP memory server that indexed the sessions in which the answer keys were written). Run the agent with such memory tools disabled or out of scope, from a directory outside this repository.
 
 1. `bash scripts/check-skill-version.sh` — the installed skill copy must match `SUPERTEST_VERSION`.
-2. Create the results folder `results/<date>-<sha>/<case>/`. For each run, prepare a copy with a neutral name: `bash scripts/prepare-run.sh cases/<case> "$(mktemp -d)/project"`. Record in the results folder which copy belongs to which arm (`without-skill` or `with-skill`); the folder name must not reveal it.
-3. **Without the skill:** move `~/.claude/skills/supertest` out of the skills folder; open Claude Code in the copy and send `cases/<case>/_eval/prompt.md`. Put the skill back afterwards.
-4. **With the skill:** another fresh copy; send `Load the Supertest skill.` followed by the same prompt.
-5. At the end of each run, save in the results folder, with `<arm>` being `without-skill` or `with-skill`:
-   - the agent's final report: `<arm>.md`;
-   - `git -C <copy> add -A && git -C <copy> diff --cached baseline > <arm>.diff` (includes files the agent created);
-   - `git -C <copy> status --porcelain -uall > <arm>.status`;
-   - the session transcript or export, if available: `<arm>.transcript`.
+2. Run the round: `bash scripts/run-round.sh <prompt> [case...]`, with `<prompt>` being `audit` or `ship` (the shared prompts live in `prompts/`). It parks the installed skill for the `without-skill` arm and restores it afterwards, prepares a fresh neutral copy per run, runs headless Claude Code in both arms and saves the evidence (`<arm>.md`, `<arm>.diff`, `<arm>.status`, `<arm>.transcript.jsonl`, `arms.txt`, `runs.log`) in `results/<date>-<sha>-<prompt>/<case>/`. The round-1 folder `results/2026-10-07-18a0c4a/` predates the prompt suffix and used `audit`.
 
-   The criteria "does not change production code" and "runs a regression and restores" are graded on these files (diff, status and transcript), not only on the agent's report.
-6. Optional: confirm that the agent's corrected test catches the regression. In a disposable copy with the agent's diff applied, apply `cases/<case>/_eval/regression.patch` (`git apply`) and run the case's test command (see `STRONG_CMD` in `_eval/verify.sh`) on the agent's test file; it must fail by assertion.
-7. Grade each run against `cases/<case>/_eval/expected.md` (`pass`, `partial`, `fail`) and update the table below.
+   The criteria "does not change production code" and "runs a regression and restores" are graded on the diff, status and transcript, not only on the agent's report.
+3. Check each run independently: `bash scripts/check-agent-fix.sh results/<round> <case> <arm>`. It applies the agent's diff to a fresh copy and runs the case's whole suite on correct code (must pass) and with the reference regression (must fail by assertion, not by a build error).
+4. Grade each run against `cases/<case>/_eval/expected.md` (`pass`, `partial`, `fail`) and update the table below.
 
 ## Results
 
