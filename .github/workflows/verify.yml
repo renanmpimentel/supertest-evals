@@ -18,7 +18,7 @@ jobs:
       - run: bash scripts/selftest/run.sh
 
   cases:
-    name: gap proof (${{ matrix.case }})
+    name: case proof (${{ matrix.case }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -29,6 +29,7 @@ jobs:
           - 03-payment-persistence
           - 04-refund-validation
           - 05-billing-profile
+          - 06-payout-fee
     steps:
       - uses: actions/checkout@v5
       - run: bash "cases/${{ matrix.case }}/_eval/verify.sh"

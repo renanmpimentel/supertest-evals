@@ -1,0 +1,11 @@
+--- a/payouts.go
++++ b/payouts.go
+@@ -35,7 +35,7 @@
+ 	if !ok {
+ 		return 0, fmt.Errorf("unknown payout method %q", method)
+ 	}
+-	fee := (amountCents*r.basisPoints+5_000)/10_000 + r.fixedCents
++	fee := amountCents*r.basisPoints/10_000 + r.fixedCents
+ 	if fee < MinFeeCents {
+ 		return MinFeeCents, nil
+ 	}

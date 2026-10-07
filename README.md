@@ -13,6 +13,9 @@ Skill version under evaluation: see `SUPERTEST_VERSION`.
 | [03 payment persistence](cases/03-payment-persistence) | Go + SQLite | `201` and ID | payment is not saved (no commit) |
 | [04 refund validation](cases/04-refund-validation) | Python + pytest | rejection of a late refund | refund window check removed |
 | [05 billing profile](cases/05-billing-profile) | TypeScript + vitest | absent fields keep their value | absent optional fields erased |
+| [06 payout fee](cases/06-payout-fee) | Go | control: tests already protect the contract | — (measures false positives) |
+
+Control cases (marked "control") have no planted gap: their tests already protect the contract, and `verify.sh` proves that a regression is caught. They measure false positives, meaning an agent that claims a gap without proof.
 
 ## Prove the gaps
 
