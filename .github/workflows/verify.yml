@@ -27,6 +27,7 @@ jobs:
           - 01-idempotent-charge
           - 02-circuit-breaker
           - 03-payment-persistence
+          - 04-refund-validation
     steps:
       - uses: actions/checkout@v5
       - run: bash "cases/${{ matrix.case }}/_eval/verify.sh"

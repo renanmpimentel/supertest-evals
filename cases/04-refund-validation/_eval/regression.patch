@@ -1,0 +1,9 @@
+--- a/app/refunds.py
++++ b/app/refunds.py
+@@ -36,6 +36,4 @@
+         raise RefundError("invalid_amount")
+     if amount_cents > refundable_amount(payment):
+         raise RefundError("exceeds_refundable")
+-    if now > refund_deadline(payment):
+-        raise RefundError("window_expired")
+     return amount_cents
