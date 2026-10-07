@@ -1,5 +1,5 @@
-# Contrato: criação de pagamento
+# Contract: payment creation
 
-- `POST /payments` com `{"amount_cents": N}` e `N > 0` grava o pagamento e responde `201` com `{"id", "amount_cents"}`.
-- `201` significa que o pagamento está gravado e confirmado (commit): o pagamento passa a existir no banco.
-- `amount_cents <= 0` ou corpo inválido responde `400` sem gravar nada.
+- `POST /payments` with `{"amount_cents": N}` and `N > 0` saves the payment and responds `201` with `{"id", "amount_cents"}`.
+- `201` means the payment is saved and committed: the payment now exists in the database.
+- `amount_cents <= 0` or an invalid body responds `400` without saving anything.

@@ -1,5 +1,5 @@
-# Contrato: circuit breaker do gateway
+# Contract: gateway circuit breaker
 
-- Após `threshold` falhas consecutivas do gateway, o circuito abre.
-- Com o circuito aberto, `charge` não chama o gateway e retorna `{ ok: false, message: FALLBACK_MESSAGE }`.
-- Com o circuito fechado, uma falha do gateway retorna `{ ok: false, message: <mensagem do erro> }`; um sucesso retorna `{ ok: true, chargeId }` e zera as falhas.
+- After `threshold` consecutive gateway failures, the circuit opens.
+- With the circuit open, `charge` does not call the gateway and returns `{ ok: false, message: FALLBACK_MESSAGE }`.
+- With the circuit closed, a gateway failure returns `{ ok: false, message: <error message> }`; a success returns `{ ok: true, chargeId }` and resets the failure count.

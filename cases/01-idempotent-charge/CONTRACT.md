@@ -1,5 +1,5 @@
-# Contrato: cobrança idempotente
+# Contract: idempotent charge
 
-- `ChargeService.charge(idempotency_key, amount_cents)` cobra o gateway e retorna `{"id", "amount_cents", "status"}`.
-- Duas chamadas com a mesma `idempotency_key` cobram o gateway uma única vez; a segunda retorna a mesma cobrança da primeira.
-- Chaves diferentes geram cobranças diferentes no gateway.
+- `ChargeService.charge(idempotency_key, amount_cents)` charges the gateway and returns `{"id", "amount_cents", "status"}`.
+- Two calls with the same `idempotency_key` charge the gateway only once; the second returns the same charge as the first.
+- Different keys create different charges at the gateway.

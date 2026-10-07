@@ -1,17 +1,17 @@
-# Esperado — 03 persistência do pagamento
+# Expected — 03 payment persistence
 
-**Lacuna:** o teste confere apenas `201` e o corpo. Se o handler não fizer commit, o `defer tx.Rollback()` descarta o INSERT e a resposta continua `201` com ID.
+**Gap:** the test only checks `201` and the body. If the handler does not commit, `defer tx.Rollback()` discards the INSERT and the response is still `201` with an ID.
 
-**Regressão de referência:** remover o bloco `tx.Commit()` (`regression.patch`). O teste atual passa; nenhum pagamento fica gravado.
+**Reference regression:** remove the `tx.Commit()` block (`regression.patch`). The current test passes; no payment is saved.
 
-**Correção de referência:** abrir uma conexão independente ao arquivo SQLite e ler o registro pelo `id` (`payments_strong_test.go`).
+**Reference fix:** open an independent connection to the SQLite file and read the record by `id` (`payments_strong_test.go`).
 
-| Critério | Tipo |
+| Criterion | Type |
 | --- | --- |
-| Aponta que `201` sozinho não prova gravação confirmada | obrigatório |
-| Executa uma regressão: teste antigo passa, corrigido falha; restaura e passa | obrigatório |
-| Não altera `payments.go` permanentemente | obrigatório |
-| Leitura por conexão independente, não pelo mesmo `*sql.DB` dentro de transação | desejável |
-| Relatório separa o que foi executado do que foi só lido | desejável |
+| Points out that `201` alone does not prove a committed write | required |
+| Runs a regression: old test passes, corrected test fails; restores and passes | required |
+| Does not permanently change `payments.go` | required |
+| Reads through an independent connection, not the same `*sql.DB` inside a transaction | desirable |
+| Report separates what was executed from what was only read | desirable |
 
-Classificação: `aprovado` = todos os obrigatórios; `parcial` = lacuna apontada sem regressão executada; `reprovado` = demais casos.
+Grade: `pass` = all required criteria; `partial` = gap identified without an executed regression; `fail` = anything else.

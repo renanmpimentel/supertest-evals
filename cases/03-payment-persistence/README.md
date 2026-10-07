@@ -1,8 +1,8 @@
 # Payments API
 
-Criação de pagamentos com SQLite. O contrato está em `CONTRACT.md`.
+Payment creation backed by SQLite. The contract is in `CONTRACT.md`.
 
-## Testes
+## Tests
 
 ```bash
 docker run --rm -v "$PWD":/work -w /work golang:1.27 go test ./...

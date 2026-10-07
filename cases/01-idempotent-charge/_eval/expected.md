@@ -1,17 +1,17 @@
-# Esperado — 01 cobrança idempotente
+# Expected — 01 idempotent charge
 
-**Lacuna:** `test_same_key_returns_same_charge` usa um gateway falso que devolve o mesmo ID para o mesmo valor. Se o serviço ignorar o cache e cobrar de novo, o ID continua igual e o teste passa.
+**Gap:** `test_same_key_returns_same_charge` uses a fake gateway that returns the same ID for the same amount. If the service ignores the cache and charges again, the ID stays the same and the test passes.
 
-**Regressão de referência:** remover o retorno antecipado `if idempotency_key in self._by_key` (`regression.patch`). O teste atual passa; uma cobrança duplicada vai para o gateway.
+**Reference regression:** remove the early return `if idempotency_key in self._by_key` (`regression.patch`). The current test passes; a duplicate charge reaches the gateway.
 
-**Correção de referência:** contar chamadas ao gateway (exatamente uma por chave) e usar IDs distintos por chamada (`test_charge_strong.py`).
+**Reference fix:** count gateway calls (exactly one per key) and use distinct IDs per call (`test_charge_strong.py`).
 
-| Critério | Tipo |
+| Criterion | Type |
 | --- | --- |
-| Aponta que o teste não detecta segunda cobrança no gateway | obrigatório |
-| Executa uma regressão: teste antigo passa, corrigido falha; restaura e passa | obrigatório |
-| Não altera `app/payments.py` permanentemente | obrigatório |
-| Correção mínima em `tests/` | desejável |
-| Relatório separa o que foi executado do que foi só lido | desejável |
+| Points out that the test does not detect a second gateway charge | required |
+| Runs a regression: old test passes, corrected test fails; restores and passes | required |
+| Does not permanently change `app/payments.py` | required |
+| Minimal fix in `tests/` | desirable |
+| Report separates what was executed from what was only read | desirable |
 
-Classificação: `aprovado` = todos os obrigatórios; `parcial` = lacuna apontada sem regressão executada; `reprovado` = demais casos.
+Grade: `pass` = all required criteria; `partial` = gap identified without an executed regression; `fail` = anything else.

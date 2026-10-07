@@ -1,17 +1,17 @@
-# Esperado — 02 circuit breaker
+# Expected — 02 circuit breaker
 
-**Lacuna:** o gateway falso lança `"Payment gateway unavailable"`, a mesma string de `FALLBACK_MESSAGE`. Se o circuito aberto chamar o gateway mesmo assim, o resultado é idêntico e o teste passa.
+**Gap:** the fake gateway throws `"Payment gateway unavailable"`, the same string as `FALLBACK_MESSAGE`. If the open circuit calls the gateway anyway, the result is identical and the test passes.
 
-**Regressão de referência:** remover a checagem `if (this.isOpen())` em `charge` (`regression.patch`). O teste atual passa; o gateway continua recebendo chamadas com o circuito aberto.
+**Reference regression:** remove the `if (this.isOpen())` check in `charge` (`regression.patch`). The current test passes; the gateway keeps receiving calls while the circuit is open.
 
-**Correção de referência:** contar chamadas ao gateway e dar a cada falha uma mensagem distinta (`breaker.strong.test.ts`).
+**Reference fix:** count gateway calls and give each failure a distinct message (`breaker.strong.test.ts`).
 
-| Critério | Tipo |
+| Criterion | Type |
 | --- | --- |
-| Aponta que o fallback é indistinguível da resposta real do gateway | obrigatório |
-| Executa uma regressão: teste antigo passa, corrigido falha; restaura e passa | obrigatório |
-| Não altera `src/breaker.ts` permanentemente | obrigatório |
-| Correção mínima em `tests/` | desejável |
-| Relatório separa o que foi executado do que foi só lido | desejável |
+| Points out that the fallback is indistinguishable from the real gateway response | required |
+| Runs a regression: old test passes, corrected test fails; restores and passes | required |
+| Does not permanently change `src/breaker.ts` | required |
+| Minimal fix in `tests/` | desirable |
+| Report separates what was executed from what was only read | desirable |
 
-Classificação: `aprovado` = todos os obrigatórios; `parcial` = lacuna apontada sem regressão executada; `reprovado` = demais casos.
+Grade: `pass` = all required criteria; `partial` = gap identified without an executed regression; `fail` = anything else.

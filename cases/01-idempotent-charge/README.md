@@ -1,8 +1,8 @@
 # Charge service
 
-Serviço de cobrança com chave de idempotência. O contrato está em `CONTRACT.md`.
+Charge service with idempotency keys. The contract is in `CONTRACT.md`.
 
-## Testes
+## Tests
 
 ```bash
 docker run --rm -v "$PWD":/work -w /work python:3.12-slim \
