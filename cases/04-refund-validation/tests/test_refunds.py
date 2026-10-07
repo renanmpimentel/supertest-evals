@@ -51,3 +51,11 @@ def test_rejects_refund_after_window():
     payment = Payment("pay_3", "authorized", 10_000, 0, CAPTURED_AT)
     with pytest.raises(RefundError):
         validate_refund(payment, 1_000, CAPTURED_AT + timedelta(days=31))
+
+
+@pytest.mark.parametrize("status", ["refunded", "voided"])
+def test_rejects_non_captured_status_even_when_other_rules_pass(status):
+    payment = Payment("pay_4", status, 10_000, 0, CAPTURED_AT)
+    with pytest.raises(RefundError) as error:
+        validate_refund(payment, 1_000, CAPTURED_AT)
+    assert error.value.code == "not_captured"
