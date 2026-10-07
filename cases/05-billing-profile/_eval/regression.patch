@@ -1,0 +1,12 @@
+--- a/src/profile.ts
++++ b/src/profile.ts
+@@ -49,7 +49,7 @@
+   return {
+     email: patch.email === undefined ? stored.email : normalizeEmail(patch.email),
+     country: patch.country === undefined ? stored.country : validateCountry(patch.country),
+-    companyName: patch.companyName === undefined ? stored.companyName : optionalText(patch.companyName),
+-    taxId: patch.taxId === undefined ? stored.taxId : optionalText(patch.taxId),
++    companyName: optionalText(patch.companyName ?? null),
++    taxId: optionalText(patch.taxId ?? null),
+   };
+ }

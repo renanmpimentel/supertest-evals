@@ -12,6 +12,7 @@ Skill version under evaluation: see `SUPERTEST_VERSION`.
 | [02 circuit breaker](cases/02-circuit-breaker) | TypeScript + vitest | fallback message | open circuit keeps calling the gateway |
 | [03 payment persistence](cases/03-payment-persistence) | Go + SQLite | `201` and ID | payment is not saved (no commit) |
 | [04 refund validation](cases/04-refund-validation) | Python + pytest | rejection of a late refund | refund window check removed |
+| [05 billing profile](cases/05-billing-profile) | TypeScript + vitest | absent fields keep their value | absent optional fields erased |
 
 ## Prove the gaps
 
