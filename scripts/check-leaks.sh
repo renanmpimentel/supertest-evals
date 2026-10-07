@@ -31,7 +31,7 @@ for case_dir in "$root"/cases/*/; do
     done < <(find "$copy" -path "$copy/.git" -prune -o -type f -print0)
   done < <(find "$case_dir/_eval" -type f -print0)
 
-  if grep -q 'verify_control_case' "$case_dir/_eval/verify.sh"; then
+  if grep -q '^verify_control_case ' "$case_dir/_eval/verify.sh"; then
     : # control case: no strong test to leak
   else
     strong="$(sed -n "s/^STRONG_SRC=[\"']\{0,1\}\([^\"']*\)[\"']\{0,1\}$/\1/p" "$case_dir/_eval/verify.sh")"

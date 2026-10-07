@@ -78,7 +78,10 @@ expect_assertion_failure() {
 }
 
 verify_case() {
-  [[ -n "${VERIFY_DRY:-}" ]] && return 0
+  if [[ -n "${VERIFY_DRY:-}" ]]; then
+    echo "DRY $(basename "$(cd "$1" && pwd)")" >&2
+    return 0
+  fi
   local case_dir
   case_dir="$(cd "$1" && pwd)"
   WORK="$(mktemp -d)"
@@ -95,7 +98,10 @@ verify_case() {
 }
 
 verify_control_case() {
-  [[ -n "${VERIFY_DRY:-}" ]] && return 0
+  if [[ -n "${VERIFY_DRY:-}" ]]; then
+    echo "DRY $(basename "$(cd "$1" && pwd)")" >&2
+    return 0
+  fi
   local case_dir
   case_dir="$(cd "$1" && pwd)"
   WORK="$(mktemp -d)"

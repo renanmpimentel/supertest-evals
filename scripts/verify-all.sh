@@ -5,7 +5,7 @@ root="$(cd "$(dirname "$0")/.." && pwd)"
 failed=()
 for script in "$root"/cases/*/_eval/verify.sh; do
   [[ -e "$script" ]] || continue
-  if ! bash "$script"; then
+  if ! env -u VERIFY_DRY bash "$script"; then
     failed+=("$(basename "$(dirname "$(dirname "$script")")")")
   fi
   echo
