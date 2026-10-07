@@ -22,6 +22,7 @@ export VERIFY_DRY=1
 # shellcheck source=/dev/null
 source "$case_dir/_eval/verify.sh"
 : "${SUITE_CMD:?SUITE_CMD not set in $case/_eval/verify.sh}"
+: "${SUITE_FAIL_RE:?SUITE_FAIL_RE not set in $case/_eval/verify.sh}"
 
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
@@ -46,8 +47,10 @@ if (( status == 0 )); then
   regressed="PASS (regression missed)"
 elif grep -Eq "$ERROR_RE" "$work/regressed.log"; then
   regressed="ERROR (build or collection error)"
-else
+elif grep -Eq "$SUITE_FAIL_RE" "$work/regressed.log"; then
   regressed="fail (regression caught)"
+else
+  regressed="ERROR (no test failure observed)"
 fi
 echo "$case $arm: correct code -> $correct; reference regression -> $regressed"
 [[ "$correct" == pass && "$regressed" == "fail (regression caught)" ]]

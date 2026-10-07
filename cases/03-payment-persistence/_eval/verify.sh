@@ -8,6 +8,7 @@ SETUP="true"
 WEAK_CMD="go test -count=1 -v -run '^TestCreatePayment(ReturnsCreated|RejectsInvalidAmount)\$' ./..."
 STRONG_CMD="go test -count=1 -v -run '^TestCreatePaymentIsPersisted\$' ./..."
 SUITE_CMD="go test -count=1 -v ./..."
+SUITE_FAIL_RE='^--- FAIL: '
 STRONG_SRC="payments_strong_test.go"
 STRONG_DEST="payments_strong_test.go"
 PASS_RE='^--- PASS: '

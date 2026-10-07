@@ -3,6 +3,10 @@
 # The without-skill arm parks the installed Supertest skill outside the skills
 # folder and restores it on exit. Usage: run-round.sh <prompt> [case...]
 # Env: MODEL (default sonnet), MAX_PARALLEL (default 3), SUPERTEST_INSTALLED.
+# Exits non-zero if any run failed, after both arms ran and the skill was restored.
+# Cleanup (INT, TERM, EXIT): each agent runs in its own session (setsid) and its
+# PID is written to $out/.pids; cleanup kills exactly those process groups (never
+# by name, so other claude sessions are untouched), then restores the skill.
 set -euo pipefail
 if [[ $# -lt 1 ]]; then
   echo "usage: $0 <prompt> [case...]" >&2
@@ -21,6 +25,18 @@ if (( $# )); then
 else
   mapfile -t cases < <(find "$root/cases" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort)
 fi
+for c in "${cases[@]}"; do
+  if [[ ! -d "$root/cases/$c" ]]; then
+    echo "unknown case: $c" >&2
+    exit 2
+  fi
+done
+for tool in claude jq setsid timeout; do
+  if ! command -v "$tool" >/dev/null 2>&1; then
+    echo "required tool not found on PATH: $tool" >&2
+    exit 2
+  fi
+done
 model="${MODEL:-sonnet}"
 max_parallel="${MAX_PARALLEL:-3}"
 skill="${SUPERTEST_INSTALLED:-$HOME/.claude/skills/supertest}"
@@ -31,7 +47,21 @@ if [[ -e "$out" ]]; then
   echo "results folder already exists: $out" >&2
   exit 1
 fi
+if [[ -e "$parked" ]]; then
+  echo "parked skill dir already exists: $parked (restore or remove it first)" >&2
+  exit 2
+fi
 bash "$root/scripts/check-skill-version.sh"
+
+kill_agents() {
+  local f pid
+  for f in "$out"/.pids/*; do
+    [[ -f "$f" ]] || continue
+    pid="$(cat "$f")"
+    kill -TERM -- "-$pid" 2>/dev/null || kill -TERM "$pid" 2>/dev/null || true
+  done
+  wait 2>/dev/null || true
+}
 
 restore_skill() {
   if [[ -d "$parked" && ! -e "$skill" ]]; then
@@ -39,24 +69,42 @@ restore_skill() {
     echo "skill restored"
   fi
 }
-trap restore_skill EXIT
+cleanup() {
+  trap - EXIT INT TERM
+  kill_agents
+  restore_skill
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 run_arm() {
+  set +e
   local case="$1" arm="$2" prefix="$3"
-  local dir="$out/$case" copy status=0 start
-  copy="$(mktemp -d)/project"
-  bash "$root/scripts/prepare-run.sh" "$root/cases/$case" "$copy" >/dev/null
-  echo "$arm $copy" >> "$dir/arms.txt"
+  local dir="$out/$case" copy status=0 start errs=""
   start=$(date +%s)
-  (cd "$copy" && timeout 2700 claude -p "${prefix}$(cat "$prompt_file")" --model "$model" \
-      --permission-mode bypassPermissions --strict-mcp-config --no-session-persistence \
-      --output-format stream-json --verbose \
-      > "$dir/$arm.transcript.jsonl" 2> "$dir/$arm.stderr") || status=$?
-  jq -r 'select(.type=="result") | .result // empty' "$dir/$arm.transcript.jsonl" > "$dir/$arm.md" || true
-  git -C "$copy" add -A
-  git -C "$copy" diff --cached baseline > "$dir/$arm.diff"
-  git -C "$copy" status --porcelain -uall > "$dir/$arm.status"
-  echo "$case $arm exit=$status seconds=$(( $(date +%s) - start ))" | tee -a "$out/runs.log"
+  copy="$(mktemp -d)/project"
+  if bash "$root/scripts/prepare-run.sh" "$root/cases/$case" "$copy" >/dev/null; then
+    echo "$arm $copy" >> "$dir/arms.txt"
+    (cd "$copy" && exec setsid timeout 2700 claude -p "${prefix}$(cat "$prompt_file")" --model "$model" \
+        --permission-mode bypassPermissions --strict-mcp-config --no-session-persistence \
+        --output-format stream-json --verbose \
+        > "$dir/$arm.transcript.jsonl" 2> "$dir/$arm.stderr") &
+    echo $! > "$out/.pids/$case.$arm"
+    wait $!
+    status=$?
+    rm -f "$out/.pids/$case.$arm"
+    jq -r 'select(.type=="result") | .result // empty' "$dir/$arm.transcript.jsonl" > "$dir/$arm.md" || errs="$errs report"
+    jq -r 'select(.type=="system" and .subtype=="hook_response")
+           | "\(.hook_name // .hook_event) exit=\(.exit_code // "n/a")\n\(.stdout // "")"' \
+        "$dir/$arm.transcript.jsonl" > "$dir/$arm.hooks.txt" || errs="$errs hooks"
+    git -C "$copy" add -A || errs="$errs add"
+    git -C "$copy" diff --cached --binary baseline > "$dir/$arm.diff" || errs="$errs diff"
+    git -C "$copy" status --porcelain -uall > "$dir/$arm.status" || errs="$errs status"
+  else
+    errs=" prepare"
+  fi
+  echo "$case $arm exit=$status seconds=$(( $(date +%s) - start )) error=${errs# }" | sed 's/error=$/error=none/' | tee -a "$out/runs.log"
 }
 
 run_all() {
@@ -65,14 +113,14 @@ run_all() {
     run_arm "$case" "$arm" "$prefix" &
     running=$((running + 1))
     if (( running >= max_parallel )); then
-      wait -n
+      wait -n || true
       running=$((running - 1))
     fi
   done
-  wait
+  wait || true
 }
 
-mkdir -p "$out"
+mkdir -p "$out/.pids"
 : > "$out/runs.log"
 for case in "${cases[@]}"; do
   mkdir -p "$out/$case"
@@ -87,4 +135,9 @@ bash "$root/scripts/check-skill-version.sh"
 
 echo "== with-skill"
 run_all with-skill $'Load the Supertest skill.\n\n'
+restore_skill
 echo "results: $out"
+failed="$(grep -vc 'exit=0 seconds=[0-9]* error=none$' "$out/runs.log" || true)"
+total="$(wc -l < "$out/runs.log")"
+echo "summary: $total runs, $failed failed"
+(( failed == 0 ))

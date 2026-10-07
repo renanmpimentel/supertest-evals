@@ -13,6 +13,12 @@
 # regression fails by assertion. With VERIFY_DRY=1 both entry points return
 # immediately, so other scripts can source a case's verify.sh to read its
 # settings.
+#
+# Two further settings are read by scripts/check-agent-fix.sh, not by this
+# library: SUITE_CMD (command that runs the case's whole suite) and
+# SUITE_FAIL_RE (regex that positively identifies failed tests in the suite
+# output, so an infrastructure failure is never mistaken for a caught
+# regression).
 
 WORK=""
 
