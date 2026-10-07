@@ -10,7 +10,7 @@ STRONG_CMD="go test -count=1 -v -run '^TestCreatePaymentIsPersisted\$' ./..."
 STRONG_SRC="payments_strong_test.go"
 STRONG_DEST="payments_strong_test.go"
 PASS_RE='^--- PASS: '
-ASSERT_RE='^--- FAIL: TestCreatePaymentIsPersisted'
+ASSERT_RE='payment pay_[0-9a-f]+ was not persisted'
 ERROR_RE='(\[build failed\]|\[setup failed\]|^panic:)'
 DOCKER_ARGS=(-v supertest-evals-gomod:/go/pkg/mod -v supertest-evals-gobuild:/root/.cache/go-build)
 

@@ -10,7 +10,7 @@ STRONG_CMD="python -m pytest -q -p no:cacheprovider tests/test_charge_strong.py"
 STRONG_SRC="test_charge_strong.py"
 STRONG_DEST="tests/test_charge_strong.py"
 PASS_RE='[0-9]+ passed'
-ASSERT_RE='^E +(assert |AssertionError)'
+ASSERT_RE='^FAILED tests/test_charge_strong\.py::test_same_key_charges_gateway_once'
 ERROR_RE='(ERROR collecting|ImportError|ModuleNotFoundError|SyntaxError)'
 DOCKER_ARGS=(-v supertest-evals-pip:/root/.cache/pip)
 
