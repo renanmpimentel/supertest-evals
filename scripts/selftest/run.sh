@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Self-test for scripts/lib/verify.sh: one valid case and four that must be rejected.
+# Self-test for scripts/lib/verify.sh: one valid case and six that must be rejected.
 set -euo pipefail
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 work="$(mktemp -d)"
@@ -10,6 +10,8 @@ WEAK_CATCHES='. ./app.sh; if [ "$VALUE" = 1 ]; then echo "1 passed"; else echo "
 WEAK_EMPTY='echo "no tests ran"'
 STRONG_OK='. ./app.sh; if [ "$VALUE" = 1 ]; then echo "1 passed"; else echo "ASSERT: expected VALUE=1, got $VALUE"; exit 1; fi'
 STRONG_ERRORS='. ./app.sh; if [ "$VALUE" = 1 ]; then echo "1 passed"; else echo "ERROR: cannot load module"; exit 1; fi'
+STRONG_PASSES='. ./app.sh; echo "1 passed"'
+STRONG_NO_MARKER='. ./app.sh; if [ "$VALUE" = 1 ]; then echo "1 passed"; else echo boom; exit 1; fi'
 PATCH_OK=$'--- a/app.sh\n+++ b/app.sh\n@@ -1 +1 @@\n-VALUE=1\n+VALUE=2\n'
 PATCH_DRIFT=$'--- a/app.sh\n+++ b/app.sh\n@@ -1 +1 @@\n-VALUE=9\n+VALUE=2\n'
 
@@ -61,12 +63,16 @@ make_case weak-catches "$WEAK_CATCHES" "$STRONG_OK" "$PATCH_OK"
 make_case error-not-assertion "$WEAK_OK" "$STRONG_ERRORS" "$PATCH_OK"
 make_case empty-collection "$WEAK_EMPTY" "$STRONG_OK" "$PATCH_OK"
 make_case patch-drift "$WEAK_OK" "$STRONG_OK" "$PATCH_DRIFT"
+make_case strong-passes "$WEAK_OK" "$STRONG_PASSES" "$PATCH_OK"
+make_case no-marker "$WEAK_OK" "$STRONG_NO_MARKER" "$PATCH_OK"
 
 expect_verify good pass 'PASS gap proven'
 expect_verify weak-catches fail 'regressed/weak: expected pass'
 expect_verify error-not-assertion fail 'collection/build error'
 expect_verify empty-collection fail 'no passing test collected'
 expect_verify patch-drift fail 'regression.patch does not apply'
+expect_verify strong-passes fail 'expected failure, but tests passed'
+expect_verify no-marker fail 'no assertion marker'
 
 if [[ -e "$work/good/tests/strong.sh" ]]; then
   echo "SELFTEST FAIL good: verify wrote into the case directory"
