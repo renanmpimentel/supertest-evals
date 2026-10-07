@@ -57,7 +57,7 @@ kill_agents() {
   local f pid
   for f in "$out"/.pids/*; do
     [[ -f "$f" ]] || continue
-    pid="$(cat "$f")"
+    pid="$(cat "$f")" || continue
     kill -TERM -- "-$pid" 2>/dev/null || kill -TERM "$pid" 2>/dev/null || true
   done
   wait 2>/dev/null || true

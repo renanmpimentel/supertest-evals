@@ -4,3 +4,5 @@ __pycache__/
 docs/
 results/**/*.transcript.jsonl
 results/**/*.stderr
+results/**/*.hooks.txt
+results/**/.pids/
