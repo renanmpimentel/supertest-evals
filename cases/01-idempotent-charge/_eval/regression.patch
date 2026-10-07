@@ -1,0 +1,11 @@
+--- a/app/payments.py
++++ b/app/payments.py
+@@ -7,8 +7,6 @@
+         self._by_key = {}
+ 
+     def charge(self, idempotency_key, amount_cents):
+-        if idempotency_key in self._by_key:
+-            return self._by_key[idempotency_key]
+         charge_id = self._gateway.charge(amount_cents)
+         result = {"id": charge_id, "amount_cents": amount_cents, "status": "succeeded"}
+         self._by_key[idempotency_key] = result
