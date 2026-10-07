@@ -1,0 +1,12 @@
+--- a/src/breaker.ts
++++ b/src/breaker.ts
+@@ -21,9 +21,6 @@
+   }
+ 
+   async charge(amountCents: number): Promise<ChargeResult> {
+-    if (this.isOpen()) {
+-      return { ok: false, message: FALLBACK_MESSAGE };
+-    }
+     try {
+       const chargeId = await this.gateway.charge(amountCents);
+       this.failures = 0;
