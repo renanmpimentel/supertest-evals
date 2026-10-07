@@ -1,0 +1,43 @@
+name: verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  selftest:
+    name: verifier self-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: bash scripts/selftest/run.sh
+
+  cases:
+    name: gap proof (${{ matrix.case }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        case:
+          - 01-idempotent-charge
+          - 02-circuit-breaker
+          - 03-payment-persistence
+    steps:
+      - uses: actions/checkout@v5
+      - run: bash "cases/${{ matrix.case }}/_eval/verify.sh"
+
+  leak-check:
+    name: answer-key leak check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: bash scripts/check-leaks.sh
+      - name: every case is in the gap-proof matrix
+        run: |
+          diff <(find cases -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort) \
+               <(sed -n 's/^ *- \([0-9][0-9]-[a-z0-9-]*\)$/\1/p' .github/workflows/verify.yml | sort)
