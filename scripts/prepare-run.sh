@@ -23,4 +23,4 @@ git -C "$dest" add -A
 git -C "$dest" -c user.name=supertest-evals -c user.email=evals@localhost commit -q -m baseline
 git -C "$dest" tag baseline
 echo "prepared $dest"
-echo "prompt: $case_dir/_eval/prompt.md"
+echo "prompts: $(cd "$(dirname "$0")/.." && pwd)/prompts/{audit,ship}.md"
