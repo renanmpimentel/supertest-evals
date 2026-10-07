@@ -29,10 +29,16 @@ trap 'rm -rf "$work"' EXIT
 for variant in correct regressed; do
   bash "$root/scripts/prepare-run.sh" "$case_dir" "$work/$variant" >/dev/null
   if [[ -s "$diff_file" ]]; then
-    git -C "$work/$variant" apply "$diff_file"
+    if ! git -C "$work/$variant" apply "$diff_file" 2>/dev/null; then
+      echo "$case $arm: agent diff does not apply"
+      exit 1
+    fi
   fi
 done
-git -C "$work/regressed" apply "$case_dir/_eval/regression.patch"
+if ! git -C "$work/regressed" apply "$case_dir/_eval/regression.patch" 2>/dev/null; then
+  echo "$case $arm: reference regression does not apply (agent changed production code?)"
+  exit 1
+fi
 
 status=0
 run_tests "$work/correct" "$SUITE_CMD" "$work/correct.log" || status=$?

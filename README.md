@@ -37,6 +37,10 @@ The same checks run in GitHub Actions (`.github/workflows/verify.yml`), plus a c
 
    Hooks from the user's Claude Code settings run in both arms (for comparability with round 1); `<arm>.hooks.txt` records each SessionStart hook's name, exit code and output. When grading, check it for injected memory or context beyond what both arms share. These files can contain private memory or context, so they are gitignored and stay local: graders read them locally and `grades.md` summarizes. The script exits non-zero if any run failed; see `runs.log` (`error=` names the failed steps).
 
+   The `without-skill` arm always runs before the `with-skill` arm, an order/time confound; record it in `grades.md`.
+
+   Before committing a round, skim each `<arm>.md` against `<arm>.hooks.txt` and make sure no private hook-injected content is echoed in the committed files.
+
    The criteria "does not change production code" and "runs a regression and restores" are graded on the diff, status and transcript, not only on the agent's report.
 3. Check each run independently: `bash scripts/check-agent-fix.sh results/<round> <case> <arm>`. It applies the agent's diff to a fresh copy and runs the case's whole suite on correct code (must pass) and with the reference regression (must fail by assertion, not by a build error).
 4. Grade each run against `cases/<case>/_eval/expected.md` (`pass`, `partial`, `fail`) and update the table below.

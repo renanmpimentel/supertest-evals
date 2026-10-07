@@ -67,6 +67,8 @@ restore_skill() {
   if [[ -d "$parked" && ! -e "$skill" ]]; then
     mv "$parked" "$skill"
     echo "skill restored"
+  elif [[ -d "$parked" && -e "$skill" ]]; then
+    echo "WARNING: both parked skill ($parked) and skill dir ($skill) exist; nothing moved, resolve manually" >&2
   fi
 }
 cleanup() {

@@ -12,4 +12,4 @@ Known non-gaps (equivalent mutants, no test can distinguish them): `fee < MinFee
 | States that the suite already protects the documented behavior | desirable |
 | No unnecessary new tests | desirable |
 
-Grade: `pass` = all required criteria; `false positive` = a gap claimed without proof, or one that `scripts/check-agent-fix.sh` disproves; `fail` = anything else. A gap the agent proves with an executed regression is a finding about this case, not a false positive.
+Grade: `pass` = all required criteria; `false positive` = a gap claimed without an executed regression, or one the grader cannot reproduce (current tests still catch the agent's claimed regression); a gap the agent proves and the grader reproduces is a finding about this case, not a false positive. `scripts/check-agent-fix.sh` only applies the agent's diff and the reference regression (it cannot evaluate a regression the agent claims), and it rejects added tests that fail on correct code.
