@@ -1,0 +1,34 @@
+diff --git a/tests/roles.test.ts b/tests/roles.test.ts
+index 9cba99d..db203f1 100644
+--- a/tests/roles.test.ts
++++ b/tests/roles.test.ts
+@@ -11,6 +11,12 @@ describe("resolveRole", () => {
+     expect(resolveRole({ sub: "u1", role: "user" }, { role: "admin" })).toBe("user");
+   });
+ 
++  it("does not take a role from the request body when the claims have none", () => {
++    expect(resolveRole({ sub: "u1" }, { role: "admin" })).toBe("guest");
++    expect(resolveRole({ sub: "u1", role: null }, { role: "admin" })).toBe("guest");
++    expect(resolveRole({ sub: "u1", role: "  " }, { role: "admin" })).toBe("guest");
++  });
++
+   it("trims and lowercases the claim role", () => {
+     expect(resolveRole({ sub: "u1", role: "  Admin " }, {})).toBe("admin");
+     expect(resolveRole({ sub: "u1", role: "SUPPORT" }, {})).toBe("support");
+@@ -29,6 +35,7 @@ describe("resolveRole", () => {
+   it("rejects an unknown role, naming it as received", () => {
+     expect(() => resolveRole({ sub: "u1", role: "Root" }, {})).toThrow(RoleError);
+     expect(() => resolveRole({ sub: "u1", role: "Root" }, {})).toThrow("unknown role: Root");
++    expect(() => resolveRole({ sub: "u1", role: "  Root " }, {})).toThrow("unknown role:   Root ");
+   });
+ 
+   it("does not treat inherited object keys as roles", () => {
+@@ -58,6 +65,8 @@ describe("isAllowed", () => {
+   it("denies actions outside the role's row", () => {
+     expect(isAllowed("guest", "payment:read")).toBe(false);
+     expect(isAllowed("guest", "payment:create")).toBe(false);
++    expect(isAllowed("guest", "refund:create")).toBe(false);
++    expect(isAllowed("guest", "refund:approve")).toBe(false);
+     expect(isAllowed("user", "refund:create")).toBe(false);
+     expect(isAllowed("user", "refund:approve")).toBe(false);
+     expect(isAllowed("support", "payment:create")).toBe(false);

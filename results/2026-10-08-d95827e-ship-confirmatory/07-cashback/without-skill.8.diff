@@ -1,0 +1,65 @@
+diff --git a/tests/test_cashback.py b/tests/test_cashback.py
+index 68ac196..1b2b0f1 100644
+--- a/tests/test_cashback.py
++++ b/tests/test_cashback.py
+@@ -57,3 +57,60 @@ def test_rejects_negative_amount():
+ def test_rejects_unknown_tier(amount):
+     with pytest.raises(CashbackError, match="unknown tier 'gold'"):
+         cashback_cents(amount, "gold")
++
++
++@pytest.mark.parametrize("tier", ["basic", "plus", "premium"])
++@pytest.mark.parametrize("amount", [-1, -499, -500, -1_000_000])
++def test_rejects_negative_amount_for_every_tier(tier, amount):
++    with pytest.raises(CashbackError):
++        cashback_cents(amount, tier)
++
++
++@pytest.mark.parametrize("amount", [-1, -10_000])
++def test_negative_amount_with_unknown_tier_raises(amount):
++    with pytest.raises(CashbackError):
++        cashback_cents(amount, "gold")
++
++
++@pytest.mark.parametrize("tier", ["Basic", "PREMIUM", "", "platinum"])
++def test_unknown_tier_message_names_the_tier(tier):
++    with pytest.raises(CashbackError, match=repr(tier)):
++        cashback_cents(10_000, tier)
++
++
++@pytest.mark.parametrize(
++    ("amount", "tier", "expected"),
++    [
++        (4_025, "plus", 81),  # 80.5
++        (4_024, "plus", 80),  # 80.48
++        (1_650, "premium", 50),  # 49.5
++        (1_649, "premium", 49),  # 49.47
++    ],
++)
++def test_rounding_half_up_for_other_tiers(amount, tier, expected):
++    assert cashback_cents(amount, tier) == expected
++
++
++@pytest.mark.parametrize("tier", ["basic", "plus", "premium"])
++def test_small_purchases_earn_nothing_every_tier(tier):
++    assert cashback_cents(499, tier) == 0
++    assert cashback_cents(0, tier) == 0
++
++
++@pytest.mark.parametrize("tier", ["basic", "plus", "premium"])
++def test_minimum_applies_at_threshold_every_tier(tier):
++    assert cashback_cents(500, tier) == 25
++
++
++@pytest.mark.parametrize(
++    ("amount", "tier"),
++    [(300_000, "basic"), (150_000, "plus"), (150_001, "plus"), (100_017, "premium")],
++)
++def test_cap_for_every_tier(amount, tier):
++    assert cashback_cents(amount, tier) == 3_000
++
++
++def test_rounded_value_just_under_minimum_is_raised():
++    assert cashback_cents(2_450, "basic") == 25  # 24.5 rounds to 25
++    assert cashback_cents(2_449, "basic") == 25  # 24.49 -> 24 -> floor 25
++    assert cashback_cents(2_550, "basic") == 26  # 25.5 -> 26

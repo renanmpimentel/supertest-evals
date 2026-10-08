@@ -1,0 +1,21 @@
+diff --git a/tests/test_cashback.py b/tests/test_cashback.py
+index 68ac196..5e85d1f 100644
+--- a/tests/test_cashback.py
++++ b/tests/test_cashback.py
+@@ -57,3 +57,16 @@ def test_rejects_negative_amount():
+ def test_rejects_unknown_tier(amount):
+     with pytest.raises(CashbackError, match="unknown tier 'gold'"):
+         cashback_cents(amount, "gold")
++
++
++def test_cashback_just_below_minimum_is_raised():
++    assert cashback_cents(2_400, "basic") == 25
++
++
++def test_cashback_just_above_maximum_is_capped():
++    assert cashback_cents(100_017, "premium") == 3_000
++
++
++def test_negative_amount_message():
++    with pytest.raises(CashbackError, match="negative"):
++        cashback_cents(-1, "basic")

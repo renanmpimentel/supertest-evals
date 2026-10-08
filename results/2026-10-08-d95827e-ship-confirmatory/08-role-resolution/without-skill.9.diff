@@ -1,0 +1,48 @@
+diff --git a/tests/roles.test.ts b/tests/roles.test.ts
+index 9cba99d..8384138 100644
+--- a/tests/roles.test.ts
++++ b/tests/roles.test.ts
+@@ -31,6 +31,17 @@ describe("resolveRole", () => {
+     expect(() => resolveRole({ sub: "u1", role: "Root" }, {})).toThrow("unknown role: Root");
+   });
+ 
++  it("never takes a role from the request body, whatever the claims hold", () => {
++    expect(resolveRole({ sub: "u1" }, { role: "admin" })).toBe("guest");
++    expect(resolveRole({ sub: "u1", role: null }, { role: "admin" })).toBe("guest");
++    expect(resolveRole({ sub: "u1", role: "  " }, { role: "admin" })).toBe("guest");
++    expect(() => resolveRole({ sub: "u1", role: "root" }, { role: "admin" })).toThrow(RoleError);
++  });
++
++  it("names an unknown role exactly as received, untrimmed", () => {
++    expect(() => resolveRole({ sub: "u1", role: "  Root " }, {})).toThrow("unknown role:   Root ");
++  });
++
+   it("does not treat inherited object keys as roles", () => {
+     expect(() => resolveRole({ sub: "u1", role: "constructor" }, {})).toThrow(RoleError);
+   });
+@@ -74,3 +85,25 @@ describe("isAllowed", () => {
+     expect(isAllowed("constructor", "catalog:read")).toBe(false);
+   });
+ });
++
++describe("isAllowed permission table", () => {
++  const table: Record<string, string[]> = {
++    guest: ["catalog:read"],
++    user: ["catalog:read", "payment:create", "payment:read"],
++    support: ["catalog:read", "payment:read", "refund:create"],
++    admin: ["catalog:read", "payment:create", "payment:read", "refund:create", "refund:approve"],
++  };
++  const actions = ["catalog:read", "payment:create", "payment:read", "refund:create", "refund:approve"];
++
++  for (const [role, allowed] of Object.entries(table)) {
++    for (const action of actions) {
++      it(`${role} ${allowed.includes(action) ? "may" : "may not"} ${action}`, () => {
++        expect(isAllowed(role, action)).toBe(allowed.includes(action));
++      });
++    }
++  }
++
++  it("does not normalize the role", () => {
++    expect(isAllowed("Admin", "catalog:read")).toBe(false);
++  });
++});

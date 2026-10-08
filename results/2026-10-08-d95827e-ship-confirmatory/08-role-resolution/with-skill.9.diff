@@ -1,0 +1,37 @@
+diff --git a/tests/roles.test.ts b/tests/roles.test.ts
+index 9cba99d..7afaddf 100644
+--- a/tests/roles.test.ts
++++ b/tests/roles.test.ts
+@@ -21,6 +21,12 @@ describe("resolveRole", () => {
+     expect(resolveRole({ sub: "u1", role: null }, {})).toBe("guest");
+   });
+ 
++  it("never takes the role from the request body, even when the claims have none", () => {
++    expect(resolveRole({ sub: "u1" }, { role: "admin" })).toBe("guest");
++    expect(resolveRole({ sub: "u1", role: null }, { role: "admin" })).toBe("guest");
++    expect(resolveRole({ sub: "u1", role: "  " }, { role: "admin" })).toBe("guest");
++  });
++
+   it("falls back to guest when the claim role is blank", () => {
+     expect(resolveRole({ sub: "u1", role: "" }, {})).toBe("guest");
+     expect(resolveRole({ sub: "u1", role: "   " }, {})).toBe("guest");
+@@ -73,4 +79,19 @@ describe("isAllowed", () => {
+     expect(isAllowed("", "catalog:read")).toBe(false);
+     expect(isAllowed("constructor", "catalog:read")).toBe(false);
+   });
++
++  it("grants exactly the documented table and nothing else", () => {
++    const table: Record<string, string[]> = {
++      guest: ["catalog:read"],
++      user: ["catalog:read", "payment:create", "payment:read"],
++      support: ["catalog:read", "payment:read", "refund:create"],
++      admin: ["catalog:read", "payment:create", "payment:read", "refund:create", "refund:approve"],
++    };
++    const actions = ["catalog:read", "payment:create", "payment:read", "refund:create", "refund:approve"];
++    for (const [role, allowed] of Object.entries(table)) {
++      for (const action of actions) {
++        expect(isAllowed(role, action), `${role} ${action}`).toBe(allowed.includes(action));
++      }
++    }
++  });
+ });

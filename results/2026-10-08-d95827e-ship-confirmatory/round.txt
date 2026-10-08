@@ -1,0 +1,3 @@
+date=2026-10-08T08:39:54-03:00 supertest=d95827e model=sonnet repeats=10 prompt=ship arms=without-skill with-skill
+claude=2.1.286 (Claude Code)
+cases=07-cashback 08-role-resolution 09-ledger-ordering

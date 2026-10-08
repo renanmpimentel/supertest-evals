@@ -1,0 +1,45 @@
+diff --git a/payouts_test.go b/payouts_test.go
+index c59b8a3..c7cf525 100644
+--- a/payouts_test.go
++++ b/payouts_test.go
+@@ -31,6 +31,14 @@ func TestFee(t *testing.T) {
+ 		{"card just above cap", "card", 198_840, 5_000},
+ 		{"card above cap", "card", 2_000_000, 5_000},
+ 		{"largest amount", "pix", 1_000_000_000_000, 5_000},
++		{"bank transfer smallest amount", "bank_transfer", 1, 150},
++		{"bank transfer just below cap", "bank_transfer", 484_900, 4_999},
++		{"bank transfer at cap", "bank_transfer", 485_000, 5_000},
++		{"pix just below cap", "pix", 999_899, 4_999},
++		{"pix at cap", "pix", 999_900, 5_000},
++		{"pix just below minimum", "pix", 999, 50},
++		{"largest amount bank transfer", "bank_transfer", 1_000_000_000_000, 5_000},
++		{"largest amount card", "card", 1_000_000_000_000, 5_000},
+ 	}
+ 	for _, c := range cases {
+ 		got, err := Fee(c.amount, c.method)
+@@ -54,10 +62,23 @@ func TestFeeRejectsInvalidInput(t *testing.T) {
+ 			t.Errorf("Fee(%d, pix) fee = %d, want 0 with an error", amount, fee)
+ 		}
+ 	}
+-	for _, amount := range []int64{0, 1_000_000_000_001} {
+-		if _, err := Fee(amount, "crypto"); !errors.Is(err, ErrInvalidAmount) {
++	for _, amount := range []int64{-1, 0, 1_000_000_000_001} {
++		fee, err := Fee(amount, "crypto")
++		if !errors.Is(err, ErrInvalidAmount) {
+ 			t.Errorf("Fee(%d, crypto) error = %v, want ErrInvalidAmount", amount, err)
+ 		}
++		if fee != 0 {
++			t.Errorf("Fee(%d, crypto) fee = %d, want 0 with an error", amount, fee)
++		}
++	}
++	for _, method := range []string{"", "PIX", "Card"} {
++		fee, err := Fee(1_000, method)
++		if err == nil || errors.Is(err, ErrInvalidAmount) || !strings.Contains(err.Error(), method) {
++			t.Errorf("Fee(1000, %q) error = %v, want unknown method error", method, err)
++		}
++		if fee != 0 {
++			t.Errorf("Fee(1000, %q) fee = %d, want 0 with an error", method, fee)
++		}
+ 	}
+ 	fee, err := Fee(1_000, "crypto")
+ 	if err == nil || !strings.Contains(err.Error(), `unknown payout method "crypto"`) {

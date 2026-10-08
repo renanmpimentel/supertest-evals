@@ -1,0 +1,11 @@
+case,kind,arm,run,verdict,verdict_ok,fix_check,prod_intact,test_lines,skill_loaded,cost_usd,turns,seconds
+06-payout-fee,control,without-skill,1,inadequate,no,pass,yes,23,no,0.08355399999999999,5,41
+06-payout-fee,control,without-skill,2,adequate,yes,pass,yes,0,no,0.07517280000000001,5,27
+06-payout-fee,control,without-skill,3,adequate,yes,pass,yes,0,no,0.06815020000000001,5,23
+06-payout-fee,control,without-skill,4,adequate,yes,pass,yes,0,no,0.0676236,4,43
+06-payout-fee,control,without-skill,5,adequate,yes,pass,yes,0,no,0.0755692,5,29
+06-payout-fee,control,with-skill,1,adequate,yes,pass,yes,0,yes,0.0889456,6,124
+06-payout-fee,control,with-skill,2,adequate,yes,pass,yes,0,yes,0.14255900000000002,10,160
+06-payout-fee,control,with-skill,3,adequate,yes,pass,yes,0,yes,0.11921179999999999,8,244
+06-payout-fee,control,with-skill,4,adequate,yes,pass,yes,0,yes,0.117501,8,183
+06-payout-fee,control,with-skill,5,adequate,yes,pass,yes,0,yes,0.16542720000000002,12,754

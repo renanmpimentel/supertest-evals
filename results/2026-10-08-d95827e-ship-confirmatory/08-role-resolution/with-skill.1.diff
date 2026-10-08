@@ -1,0 +1,26 @@
+diff --git a/tests/roles.test.ts b/tests/roles.test.ts
+index 9cba99d..44e0729 100644
+--- a/tests/roles.test.ts
++++ b/tests/roles.test.ts
+@@ -64,6 +64,21 @@ describe("isAllowed", () => {
+     expect(isAllowed("support", "refund:approve")).toBe(false);
+   });
+ 
++  it("matches the permission table exactly for every role and action", () => {
++    const table: Record<string, string[]> = {
++      guest: ["catalog:read"],
++      user: ["catalog:read", "payment:create", "payment:read"],
++      support: ["catalog:read", "payment:read", "refund:create"],
++      admin: ["catalog:read", "payment:create", "payment:read", "refund:create", "refund:approve"],
++    };
++    const actions = ["catalog:read", "payment:create", "payment:read", "refund:create", "refund:approve"];
++    for (const [role, allowed] of Object.entries(table)) {
++      for (const action of actions) {
++        expect(isAllowed(role, action), `${role} ${action}`).toBe(allowed.includes(action));
++      }
++    }
++  });
++
+   it("denies unknown actions, even to admin", () => {
+     expect(isAllowed("admin", "user:delete")).toBe(false);
+   });

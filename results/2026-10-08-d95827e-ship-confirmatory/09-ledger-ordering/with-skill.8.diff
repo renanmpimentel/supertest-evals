@@ -1,0 +1,29 @@
+diff --git a/tests/test_ledger.py b/tests/test_ledger.py
+index a1d65c7..27ed774 100644
+--- a/tests/test_ledger.py
++++ b/tests/test_ledger.py
+@@ -29,7 +29,6 @@ def test_entries_are_in_timestamp_order():
+     ledger.add(30, "credit", 100)
+     ledger.add(10, "credit", 200)
+     ledger.add(20, "debit", 50)
+-    ledger.close_day()
+     assert stamps(ledger) == [10, 20, 30]
+ 
+ 
+@@ -110,3 +109,16 @@ def test_rejected_entries_are_not_recorded():
+             ledger.add(*args)
+     assert ledger.entries() == []
+     assert ledger.balance() == 0
++
++
++def test_out_of_order_adds_with_ties_are_sorted_stably():
++    ledger = Ledger()
++    ledger.add(20, "credit", 1)
++    ledger.add(10, "credit", 2)
++    ledger.add(20, "debit", 3)
++    ledger.add(10, "debit", 4)
++    ledger.add(15, "credit", 5)
++    expected = [(10, 2), (10, 4), (15, 5), (20, 1), (20, 3)]
++    assert [(e.timestamp, e.amount_cents) for e in ledger.entries()] == expected
++    ledger.close_day()
++    assert [(e.timestamp, e.amount_cents) for e in ledger.entries()] == expected

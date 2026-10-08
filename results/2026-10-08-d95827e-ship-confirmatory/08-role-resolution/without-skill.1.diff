@@ -1,0 +1,50 @@
+diff --git a/tests/roles.test.ts b/tests/roles.test.ts
+index 9cba99d..72febb3 100644
+--- a/tests/roles.test.ts
++++ b/tests/roles.test.ts
+@@ -31,6 +31,20 @@ describe("resolveRole", () => {
+     expect(() => resolveRole({ sub: "u1", role: "Root" }, {})).toThrow("unknown role: Root");
+   });
+ 
++  it("never falls back to the request role when the claims have none or a blank one", () => {
++    expect(resolveRole({ sub: "u1" }, { role: "admin" })).toBe("guest");
++    expect(resolveRole({ sub: "u1", role: null }, { role: "admin" })).toBe("guest");
++    expect(resolveRole({ sub: "u1", role: "  " }, { role: "admin" })).toBe("guest");
++  });
++
++  it("ignores an invalid request role when the claims are valid", () => {
++    expect(resolveRole({ sub: "u1", role: "user" }, { role: "bogus" })).toBe("user");
++  });
++
++  it("names the unknown role exactly as received, without trimming or lowercasing", () => {
++    expect(() => resolveRole({ sub: "u1", role: "  ROOT " }, {})).toThrow("unknown role:   ROOT ");
++  });
++
+   it("does not treat inherited object keys as roles", () => {
+     expect(() => resolveRole({ sub: "u1", role: "constructor" }, {})).toThrow(RoleError);
+   });
+@@ -72,5 +86,24 @@ describe("isAllowed", () => {
+     expect(isAllowed("root", "catalog:read")).toBe(false);
+     expect(isAllowed("", "catalog:read")).toBe(false);
+     expect(isAllowed("constructor", "catalog:read")).toBe(false);
++    expect(isAllowed("Admin", "catalog:read")).toBe(false);
++  });
++
++  it("grants each role exactly its row and nothing else", () => {
++    const all = ["catalog:read", "payment:create", "payment:read", "refund:create", "refund:approve"];
++    const table: Record<string, string[]> = {
++      guest: ["catalog:read"],
++      user: ["catalog:read", "payment:create", "payment:read"],
++      support: ["catalog:read", "payment:read", "refund:create"],
++      admin: all,
++    };
++    for (const [role, row] of Object.entries(table)) {
++      expect(all.filter((a) => isAllowed(role, a))).toEqual(row);
++    }
++  });
++
++  it("does not treat inherited keys as actions", () => {
++    expect(isAllowed("admin", "toString")).toBe(false);
++    expect(isAllowed("admin", "length")).toBe(false);
+   });
+ });

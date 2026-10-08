@@ -1,0 +1,42 @@
+diff --git a/tests/roles.test.ts b/tests/roles.test.ts
+index 9cba99d..1654fa6 100644
+--- a/tests/roles.test.ts
++++ b/tests/roles.test.ts
+@@ -74,3 +74,37 @@ describe("isAllowed", () => {
+     expect(isAllowed("constructor", "catalog:read")).toBe(false);
+   });
+ });
++
++describe("contract hardening", () => {
++  it("names the role exactly as received, without trimming or lowercasing", () => {
++    expect(() => resolveRole({ sub: "u1", role: "  Root " }, {})).toThrow("unknown role:   Root ");
++  });
++
++  it("grants exactly the documented actions, and no others, to each role", () => {
++    const actions = [
++      "catalog:read",
++      "payment:create",
++      "payment:read",
++      "refund:create",
++      "refund:approve",
++    ];
++    const table: Record<string, string[]> = {
++      guest: ["catalog:read"],
++      user: ["catalog:read", "payment:create", "payment:read"],
++      support: ["catalog:read", "payment:read", "refund:create"],
++      admin: actions,
++    };
++    for (const [role, allowed] of Object.entries(table)) {
++      for (const action of actions) {
++        expect(isAllowed(role, action), `${role} ${action}`).toBe(allowed.includes(action));
++      }
++    }
++  });
++
++  it("matches actions exactly, not by prefix or case", () => {
++    expect(isAllowed("admin", "catalog:read:all")).toBe(false);
++    expect(isAllowed("admin", "catalog")).toBe(false);
++    expect(isAllowed("admin", "Catalog:Read")).toBe(false);
++    expect(isAllowed("admin", "")).toBe(false);
++  });
++});

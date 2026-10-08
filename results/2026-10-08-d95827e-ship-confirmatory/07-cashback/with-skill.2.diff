@@ -1,0 +1,14 @@
+diff --git a/tests/test_cashback.py b/tests/test_cashback.py
+index 68ac196..c1faced 100644
+--- a/tests/test_cashback.py
++++ b/tests/test_cashback.py
+@@ -57,3 +57,9 @@ def test_rejects_negative_amount():
+ def test_rejects_unknown_tier(amount):
+     with pytest.raises(CashbackError, match="unknown tier 'gold'"):
+         cashback_cents(amount, "gold")
++
++
++@pytest.mark.parametrize("tier", ["basic", "premium", "gold"])
++def test_rejects_negative_amount_for_any_tier(tier):
++    with pytest.raises(CashbackError):
++        cashback_cents(-10_000, tier)

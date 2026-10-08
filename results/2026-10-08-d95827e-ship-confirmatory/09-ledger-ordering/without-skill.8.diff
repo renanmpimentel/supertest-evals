@@ -1,0 +1,60 @@
+diff --git a/tests/test_ledger.py b/tests/test_ledger.py
+index a1d65c7..e0af899 100644
+--- a/tests/test_ledger.py
++++ b/tests/test_ledger.py
+@@ -110,3 +110,55 @@ def test_rejected_entries_are_not_recorded():
+             ledger.add(*args)
+     assert ledger.entries() == []
+     assert ledger.balance() == 0
++
++
++def test_entries_are_ordered_without_close_day():
++    ledger = Ledger()
++    ledger.add(30, "credit", 100)
++    ledger.add(10, "credit", 200)
++    ledger.add(20, "debit", 50)
++    assert stamps(ledger) == [10, 20, 30]
++
++
++def test_out_of_order_ties_keep_insertion_order():
++    ledger = Ledger()
++    ledger.add(20, "credit", 1)
++    ledger.add(10, "credit", 2)
++    ledger.add(20, "debit", 3)
++    ledger.add(10, "debit", 4)
++    assert [e.amount_cents for e in ledger.entries()] == [2, 4, 1, 3]
++    ledger.close_day()
++    assert [e.amount_cents for e in ledger.entries()] == [2, 4, 1, 3]
++
++
++def test_close_day_does_not_clear_or_change_the_ledger():
++    ledger = Ledger()
++    ledger.add(2, "debit", 300)
++    ledger.add(1, "credit", 1_000)
++    first = ledger.close_day()
++    assert ledger.close_day() == first
++    assert ledger.balance() == 700
++    assert len(ledger.entries()) == 2
++
++
++def test_close_day_returns_a_fresh_dict():
++    ledger = Ledger()
++    ledger.add(1, "credit", 100)
++    ledger.close_day()["credits"] = 999
++    assert ledger.close_day()["credits"] == 100
++
++
++def test_add_after_close_day_is_recorded():
++    ledger = Ledger()
++    ledger.add(5, "credit", 100)
++    ledger.close_day()
++    ledger.add(1, "debit", 40)
++    assert stamps(ledger) == [1, 5]
++    assert ledger.close_day() == {"count": 2, "credits": 100, "debits": 40, "balance": 60}
++
++
++def test_balance_ignores_nothing_and_matches_close_day():
++    ledger = Ledger()
++    for i, (k, a) in enumerate([("credit", 7), ("debit", 3), ("debit", 2), ("credit", 1)]):
++        ledger.add(i, k, a)
++    assert ledger.balance() == ledger.close_day()["balance"] == 3

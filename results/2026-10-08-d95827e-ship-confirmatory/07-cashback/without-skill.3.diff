@@ -1,0 +1,61 @@
+diff --git a/tests/test_cashback.py b/tests/test_cashback.py
+index 68ac196..4700844 100644
+--- a/tests/test_cashback.py
++++ b/tests/test_cashback.py
+@@ -57,3 +57,56 @@ def test_rejects_negative_amount():
+ def test_rejects_unknown_tier(amount):
+     with pytest.raises(CashbackError, match="unknown tier 'gold'"):
+         cashback_cents(amount, "gold")
++
++
++@pytest.mark.parametrize(
++    ("amount", "tier", "expected"),
++    [
++        (4_025, "plus", 81),  # 80.5 rounds up
++        (4_024, "plus", 80),
++        (2_017, "premium", 61),  # 60.51
++        (2_016, "premium", 60),  # 60.48
++        (10_050, "basic", 101),  # 100.5
++    ],
++)
++def test_rounding_per_tier(amount, tier, expected):
++    assert cashback_cents(amount, tier) == expected
++
++
++@pytest.mark.parametrize(
++    ("amount", "tier", "expected"),
++    [
++        (149_999, "plus", 3_000),  # 2999.98 rounds to the cap
++        (149_975, "plus", 3_000),  # 2999.5 rounds up
++        (149_974, "plus", 2_999),
++        (299_900, "basic", 2_999),
++        (300_000, "basic", 3_000),
++        (5_000_000, "basic", 3_000),
++        (5_000_000, "plus", 3_000),
++    ],
++)
++def test_cap_for_other_tiers(amount, tier, expected):
++    assert cashback_cents(amount, tier) == expected
++
++
++@pytest.mark.parametrize("tier", ["basic", "plus", "premium"])
++@pytest.mark.parametrize("amount", [-1, -499, -500, -1_000_000])
++def test_rejects_negative_amount_any_tier(amount, tier):
++    with pytest.raises(CashbackError):
++        cashback_cents(amount, tier)
++
++
++@pytest.mark.parametrize("amount", [-1, -10_000])
++def test_negative_amount_with_unknown_tier_raises(amount):
++    with pytest.raises(CashbackError):
++        cashback_cents(amount, "gold")
++
++
++@pytest.mark.parametrize("tier", ["Basic", "", "PREMIUM"])
++def test_tier_names_are_exact(tier):
++    with pytest.raises(CashbackError, match="unknown tier"):
++        cashback_cents(10_000, tier)
++
++
++def test_error_is_value_error():
++    assert issubclass(CashbackError, ValueError)

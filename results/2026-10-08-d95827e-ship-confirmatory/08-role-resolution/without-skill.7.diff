@@ -1,0 +1,61 @@
+diff --git a/tests/roles.test.ts b/tests/roles.test.ts
+index 9cba99d..263ed0f 100644
+--- a/tests/roles.test.ts
++++ b/tests/roles.test.ts
+@@ -11,6 +11,27 @@ describe("resolveRole", () => {
+     expect(resolveRole({ sub: "u1", role: "user" }, { role: "admin" })).toBe("user");
+   });
+ 
++  it("never falls back to the request body role when the claims have none", () => {
++    expect(resolveRole({ sub: "u1" }, { role: "admin" })).toBe("guest");
++    expect(resolveRole({ sub: "u1", role: null }, { role: "admin" })).toBe("guest");
++    expect(resolveRole({ sub: "u1", role: "  " }, { role: "admin" })).toBe("guest");
++  });
++
++  it("does not let a valid request role mask an unknown claim role", () => {
++    expect(() => resolveRole({ sub: "u1", role: "Root" }, { role: "admin" })).toThrow(RoleError);
++  });
++
++  it("resolves every known role, case-insensitively", () => {
++    for (const role of ["guest", "user", "support", "admin"]) {
++      expect(resolveRole({ sub: "u1", role }, {})).toBe(role);
++      expect(resolveRole({ sub: "u1", role: ` ${role.toUpperCase()}\t` }, {})).toBe(role);
++    }
++  });
++
++  it("names the unknown role exactly as received, untrimmed", () => {
++    expect(() => resolveRole({ sub: "u1", role: "  Root " }, {})).toThrow("unknown role:   Root ");
++  });
++
+   it("trims and lowercases the claim role", () => {
+     expect(resolveRole({ sub: "u1", role: "  Admin " }, {})).toBe("admin");
+     expect(resolveRole({ sub: "u1", role: "SUPPORT" }, {})).toBe("support");
+@@ -74,3 +95,28 @@ describe("isAllowed", () => {
+     expect(isAllowed("constructor", "catalog:read")).toBe(false);
+   });
+ });
++
++describe("isAllowed permission table", () => {
++  const table: Record<string, string[]> = {
++    guest: ["catalog:read"],
++    user: ["catalog:read", "payment:create", "payment:read"],
++    support: ["catalog:read", "payment:read", "refund:create"],
++    admin: ["catalog:read", "payment:create", "payment:read", "refund:create", "refund:approve"],
++  };
++  const actions = ["catalog:read", "payment:create", "payment:read", "refund:create", "refund:approve"];
++
++  it("matches the documented table exactly", () => {
++    for (const [role, allowed] of Object.entries(table)) {
++      for (const action of actions) {
++        expect(isAllowed(role, action), `${role} ${action}`).toBe(allowed.includes(action));
++      }
++    }
++  });
++
++  it("does not normalize the role or match actions loosely", () => {
++    expect(isAllowed("Admin", "catalog:read")).toBe(false);
++    expect(isAllowed("admin", "Refund:Approve")).toBe(false);
++    expect(isAllowed("admin", "")).toBe(false);
++    expect(isAllowed("admin", "length")).toBe(false);
++  });
++});

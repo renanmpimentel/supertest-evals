@@ -1,0 +1,72 @@
+diff --git a/tests/test_ledger.py b/tests/test_ledger.py
+index a1d65c7..5432638 100644
+--- a/tests/test_ledger.py
++++ b/tests/test_ledger.py
+@@ -110,3 +110,67 @@ def test_rejected_entries_are_not_recorded():
+             ledger.add(*args)
+     assert ledger.entries() == []
+     assert ledger.balance() == 0
++
++
++def test_entries_are_ordered_without_close_day():
++    ledger = Ledger()
++    for ts in (30, 10, 20, 10, 0):
++        ledger.add(ts, "credit", 1)
++    assert stamps(ledger) == [0, 10, 10, 20, 30]
++
++
++def test_close_day_keeps_same_timestamp_insertion_order():
++    ledger = Ledger()
++    ledger.add(10, "credit", 100)
++    ledger.add(5, "credit", 1)
++    ledger.add(10, "debit", 200)
++    ledger.add(10, "credit", 400)
++    before = ledger.entries()
++    ledger.close_day()
++    assert ledger.entries() == before
++    assert [e.amount_cents for e in before] == [1, 100, 200, 400]
++
++
++def test_close_day_is_repeatable_and_does_not_change_ledger():
++    ledger = Ledger()
++    ledger.add(2, "debit", 300)
++    ledger.add(1, "credit", 1_000)
++    first = ledger.close_day()
++    assert ledger.close_day() == first
++    assert ledger.balance() == 700
++    assert len(ledger.entries()) == 2
++
++
++def test_close_day_with_only_debits():
++    ledger = Ledger()
++    ledger.add(1, "debit", 300)
++    ledger.add(2, "debit", 200)
++    assert ledger.close_day() == {"count": 2, "credits": 0, "debits": 500, "balance": -500}
++
++
++def test_close_day_ignores_rejected_entries():
++    ledger = Ledger()
++    ledger.add(1, "credit", 100)
++    with pytest.raises(LedgerError):
++        ledger.add(2, "debit", 0)
++    assert ledger.close_day() == {"count": 1, "credits": 100, "debits": 0, "balance": 100}
++
++
++def test_mutating_returned_list_does_not_affect_later_adds_or_totals():
++    ledger = Ledger()
++    ledger.add(1, "credit", 100)
++    returned = ledger.entries()
++    returned.append("junk")
++    returned.clear()
++    ledger.add(2, "debit", 40)
++    assert ledger.balance() == 60
++    assert stamps(ledger) == [1, 2]
++
++
++def test_balance_and_entries_after_interleaved_adds():
++    ledger = Ledger()
++    ledger.add(50, "debit", 10)
++    assert ledger.balance() == -10
++    ledger.add(1, "credit", 25)
++    assert ledger.balance() == 15
++    assert stamps(ledger) == [1, 50]

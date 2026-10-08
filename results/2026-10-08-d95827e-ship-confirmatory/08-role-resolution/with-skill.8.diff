@@ -1,0 +1,41 @@
+diff --git a/tests/roles.test.ts b/tests/roles.test.ts
+index 9cba99d..29d3464 100644
+--- a/tests/roles.test.ts
++++ b/tests/roles.test.ts
+@@ -26,6 +26,16 @@ describe("resolveRole", () => {
+     expect(resolveRole({ sub: "u1", role: "   " }, {})).toBe("guest");
+   });
+ 
++  it("does not take the role from the request body when the claims have none", () => {
++    expect(resolveRole({ sub: "u1" }, { role: "admin" })).toBe("guest");
++    expect(resolveRole({ sub: "u1", role: null }, { role: "admin" })).toBe("guest");
++    expect(resolveRole({ sub: "u1", role: "  " }, { role: "admin" })).toBe("guest");
++  });
++
++  it("names the unknown role exactly as received, without trimming or lowercasing", () => {
++    expect(() => resolveRole({ sub: "u1", role: "  Root " }, {})).toThrow("unknown role:   Root ");
++  });
++
+   it("rejects an unknown role, naming it as received", () => {
+     expect(() => resolveRole({ sub: "u1", role: "Root" }, {})).toThrow(RoleError);
+     expect(() => resolveRole({ sub: "u1", role: "Root" }, {})).toThrow("unknown role: Root");
+@@ -64,6 +74,19 @@ describe("isAllowed", () => {
+     expect(isAllowed("support", "refund:approve")).toBe(false);
+   });
+ 
++  it("denies guest every action but catalog:read", () => {
++    for (const action of ["payment:create", "payment:read", "refund:create", "refund:approve"]) {
++      expect(isAllowed("guest", action)).toBe(false);
++    }
++  });
++
++  it("denies partial action names", () => {
++    expect(isAllowed("admin", "catalog")).toBe(false);
++    expect(isAllowed("admin", "catalog:")).toBe(false);
++    expect(isAllowed("admin", "refund:app")).toBe(false);
++    expect(isAllowed("admin", "")).toBe(false);
++  });
++
+   it("denies unknown actions, even to admin", () => {
+     expect(isAllowed("admin", "user:delete")).toBe(false);
+   });

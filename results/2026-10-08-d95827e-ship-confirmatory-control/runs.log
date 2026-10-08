@@ -1,0 +1,10 @@
+06-payout-fee without-skill.3 exit=0 seconds=24 error=none
+06-payout-fee without-skill.5 exit=0 seconds=31 error=none
+06-payout-fee without-skill.1 exit=0 seconds=43 error=none
+06-payout-fee without-skill.2 exit=0 seconds=29 error=none
+06-payout-fee with-skill.2 exit=0 seconds=161 error=none
+06-payout-fee with-skill.3 exit=0 seconds=246 error=none
+06-payout-fee with-skill.1 exit=0 seconds=126 error=none
+06-payout-fee without-skill.4 exit=0 seconds=46 error=none
+06-payout-fee with-skill.4 exit=0 seconds=184 error=none
+06-payout-fee with-skill.5 exit=0 seconds=761 error=none

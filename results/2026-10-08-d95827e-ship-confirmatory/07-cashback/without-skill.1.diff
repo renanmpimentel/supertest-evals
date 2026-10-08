@@ -1,0 +1,74 @@
+diff --git a/app/cashback.py b/app/cashback.py
+index 807fbd9..b0a7816 100644
+--- a/app/cashback.py
++++ b/app/cashback.py
+@@ -11,10 +11,10 @@ class CashbackError(ValueError):
+ 
+ 
+ def cashback_cents(amount_cents, tier):
+-    if amount_cents < 0:
+-        raise CashbackError("amount must not be negative")
+     if tier not in RATES_BPS:
+         raise CashbackError(f"unknown tier {tier!r}")
++    if amount_cents < 0:
++        raise CashbackError("amount must not be negative")
+     if amount_cents < MIN_PURCHASE_CENTS:
+         return 0
+     raw = (amount_cents * RATES_BPS[tier] + 5_000) // 10_000
+diff --git a/tests/test_cashback.py b/tests/test_cashback.py
+index 68ac196..351414c 100644
+--- a/tests/test_cashback.py
++++ b/tests/test_cashback.py
+@@ -57,3 +57,52 @@ def test_rejects_negative_amount():
+ def test_rejects_unknown_tier(amount):
+     with pytest.raises(CashbackError, match="unknown tier 'gold'"):
+         cashback_cents(amount, "gold")
++
++
++@pytest.mark.parametrize("tier", ["basic", "plus", "premium"])
++@pytest.mark.parametrize("amount", [-1, -500, -1_000_000])
++def test_rejects_negative_amount_for_every_tier(tier, amount):
++    with pytest.raises(CashbackError):
++        cashback_cents(amount, tier)
++
++
++@pytest.mark.parametrize("amount", [-1, -10_000])
++def test_unknown_tier_with_negative_amount_names_tier(amount):
++    with pytest.raises(CashbackError, match="unknown tier 'gold'"):
++        cashback_cents(amount, "gold")
++
++
++@pytest.mark.parametrize("tier", ["Basic", "", None])
++def test_tier_names_are_exact(tier):
++    with pytest.raises(CashbackError):
++        cashback_cents(10_000, tier)
++
++
++@pytest.mark.parametrize(
++    ("amount", "tier", "expected"),
++    [
++        (4_025, "plus", 81),  # 80.5 rounds up
++        (4_024, "plus", 80),
++        (3_350, "premium", 101),  # 100.5 rounds up
++        (3_349, "premium", 100),
++    ],
++)
++def test_rounding_for_other_tiers(amount, tier, expected):
++    assert cashback_cents(amount, tier) == expected
++
++
++@pytest.mark.parametrize(
++    ("amount", "tier", "expected"),
++    [
++        (500, "premium", 25),  # raw 15
++        (833, "premium", 25),  # raw 24.99 -> 25
++        (1_250, "plus", 25),
++        (1_300, "plus", 26),
++        (150_000, "plus", 3_000),
++        (150_100, "plus", 3_000),
++        (300_000, "basic", 3_000),
++        (100_017, "premium", 3_000),  # 3000.51 rounds to 3001, capped
++    ],
++)
++def test_clamping_across_tiers(amount, tier, expected):
++    assert cashback_cents(amount, tier) == expected

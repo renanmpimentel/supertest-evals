@@ -1,0 +1,31 @@
+diff --git a/tests/test_ledger.py b/tests/test_ledger.py
+index a1d65c7..26c8c74 100644
+--- a/tests/test_ledger.py
++++ b/tests/test_ledger.py
+@@ -29,7 +29,6 @@ def test_entries_are_in_timestamp_order():
+     ledger.add(30, "credit", 100)
+     ledger.add(10, "credit", 200)
+     ledger.add(20, "debit", 50)
+-    ledger.close_day()
+     assert stamps(ledger) == [10, 20, 30]
+ 
+ 
+@@ -42,6 +41,18 @@ def test_same_timestamp_keeps_insertion_order():
+     assert [e.amount_cents for e in ledger.entries()] == [300, 100, 200, 400]
+ 
+ 
++def test_same_timestamp_keeps_insertion_order_when_added_out_of_order():
++    ledger = Ledger()
++    ledger.add(20, "credit", 1)
++    ledger.add(10, "credit", 2)
++    ledger.add(20, "debit", 3)
++    ledger.add(10, "debit", 4)
++    ledger.add(15, "credit", 5)
++    assert [(e.timestamp, e.amount_cents) for e in ledger.entries()] == [
++        (10, 2), (10, 4), (15, 5), (20, 1), (20, 3),
++    ]
++
++
+ def test_entries_returns_a_copy():
+     ledger = Ledger()
+     ledger.add(10, "credit", 100)

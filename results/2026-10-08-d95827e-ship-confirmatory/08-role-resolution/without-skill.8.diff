@@ -1,0 +1,47 @@
+diff --git a/tests/roles.test.ts b/tests/roles.test.ts
+index 9cba99d..35e9fc1 100644
+--- a/tests/roles.test.ts
++++ b/tests/roles.test.ts
+@@ -11,6 +11,16 @@ describe("resolveRole", () => {
+     expect(resolveRole({ sub: "u1", role: "user" }, { role: "admin" })).toBe("user");
+   });
+ 
++  it("does not fall back to the request body role when the claims have none", () => {
++    expect(resolveRole({ sub: "u1" }, { role: "admin" })).toBe("guest");
++    expect(resolveRole({ sub: "u1", role: null }, { role: "admin" })).toBe("guest");
++    expect(resolveRole({ sub: "u1", role: "  " }, { role: "admin" })).toBe("guest");
++  });
++
++  it("does not let the request body role override an unknown claim role", () => {
++    expect(() => resolveRole({ sub: "u1", role: "root" }, { role: "admin" })).toThrow(RoleError);
++  });
++
+   it("trims and lowercases the claim role", () => {
+     expect(resolveRole({ sub: "u1", role: "  Admin " }, {})).toBe("admin");
+     expect(resolveRole({ sub: "u1", role: "SUPPORT" }, {})).toBe("support");
+@@ -73,4 +83,25 @@ describe("isAllowed", () => {
+     expect(isAllowed("", "catalog:read")).toBe(false);
+     expect(isAllowed("constructor", "catalog:read")).toBe(false);
+   });
++
++  it("matches the documented table exactly", () => {
++    const table: Record<string, string[]> = {
++      guest: ["catalog:read"],
++      user: ["catalog:read", "payment:create", "payment:read"],
++      support: ["catalog:read", "payment:read", "refund:create"],
++      admin: ["catalog:read", "payment:create", "payment:read", "refund:create", "refund:approve"],
++    };
++    const actions = ["catalog:read", "payment:create", "payment:read", "refund:create", "refund:approve"];
++    for (const [role, allowed] of Object.entries(table)) {
++      for (const action of actions) {
++        expect(isAllowed(role, action), `${role} ${action}`).toBe(allowed.includes(action));
++      }
++    }
++  });
++
++  it("denies inherited property names as actions and is case-sensitive on roles", () => {
++    expect(isAllowed("admin", "constructor")).toBe(false);
++    expect(isAllowed("admin", "length")).toBe(false);
++    expect(isAllowed("Admin", "catalog:read")).toBe(false);
++  });
+ });

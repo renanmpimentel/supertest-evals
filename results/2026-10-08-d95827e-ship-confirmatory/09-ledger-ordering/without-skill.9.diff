@@ -1,0 +1,47 @@
+diff --git a/tests/test_ledger.py b/tests/test_ledger.py
+index a1d65c7..db795ac 100644
+--- a/tests/test_ledger.py
++++ b/tests/test_ledger.py
+@@ -110,3 +110,42 @@ def test_rejected_entries_are_not_recorded():
+             ledger.add(*args)
+     assert ledger.entries() == []
+     assert ledger.balance() == 0
++
++
++def test_entries_are_in_timestamp_order_without_close_day():
++    ledger = Ledger()
++    ledger.add(30, "credit", 100)
++    ledger.add(10, "credit", 200)
++    ledger.add(20, "debit", 50)
++    assert stamps(ledger) == [10, 20, 30]
++
++
++def test_out_of_order_adds_with_ties_keep_insertion_order():
++    ledger = Ledger()
++    ledger.add(20, "credit", 1)
++    ledger.add(10, "credit", 2)
++    ledger.add(20, "debit", 3)
++    ledger.add(10, "debit", 4)
++    ledger.add(20, "credit", 5)
++    assert [(e.timestamp, e.amount_cents) for e in ledger.entries()] == [
++        (10, 2), (10, 4), (20, 1), (20, 3), (20, 5),
++    ]
++
++
++def test_close_day_does_not_change_entries():
++    ledger = Ledger()
++    ledger.add(20, "credit", 1)
++    ledger.add(10, "debit", 2)
++    ledger.add(20, "debit", 3)
++    before = ledger.entries()
++    ledger.close_day()
++    assert ledger.entries() == before
++    assert ledger.close_day() == ledger.close_day()
++
++
++def test_entries_copy_is_independent_of_later_adds():
++    ledger = Ledger()
++    ledger.add(1, "credit", 1)
++    snapshot = ledger.entries()
++    ledger.add(2, "credit", 1)
++    assert len(snapshot) == 1

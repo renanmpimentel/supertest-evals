@@ -1,0 +1,56 @@
+diff --git a/tests/test_ledger.py b/tests/test_ledger.py
+index a1d65c7..865259b 100644
+--- a/tests/test_ledger.py
++++ b/tests/test_ledger.py
+@@ -110,3 +110,51 @@ def test_rejected_entries_are_not_recorded():
+             ledger.add(*args)
+     assert ledger.entries() == []
+     assert ledger.balance() == 0
++
++
++def test_order_without_close_day_and_ties_out_of_order():
++    ledger = Ledger()
++    ledger.add(20, "credit", 1)
++    ledger.add(10, "credit", 2)
++    ledger.add(20, "debit", 3)
++    ledger.add(10, "debit", 4)
++    ledger.add(15, "credit", 5)
++    ledger.add(10, "credit", 6)
++    assert [(e.timestamp, e.amount_cents) for e in ledger.entries()] == [
++        (10, 2), (10, 4), (10, 6), (15, 5), (20, 1), (20, 3),
++    ]
++
++
++def test_close_day_keeps_tie_order_and_is_repeatable():
++    ledger = Ledger()
++    for amount in (3, 1, 2):
++        ledger.add(7, "credit", amount)
++    ledger.add(1, "debit", 9)
++    first = ledger.close_day()
++    assert ledger.close_day() == first
++    assert [e.amount_cents for e in ledger.entries()] == [9, 3, 1, 2]
++    assert len(ledger.entries()) == 4
++
++
++def test_close_day_with_only_debits():
++    ledger = Ledger()
++    ledger.add(1, "debit", 40)
++    ledger.add(2, "debit", 60)
++    assert ledger.close_day() == {"count": 2, "credits": 0, "debits": 100, "balance": -100}
++
++
++def test_adding_after_close_day_still_counts_and_orders():
++    ledger = Ledger()
++    ledger.add(5, "credit", 100)
++    ledger.close_day()
++    ledger.add(1, "debit", 30)
++    assert stamps(ledger) == [1, 5]
++    assert ledger.close_day() == {"count": 2, "credits": 100, "debits": 30, "balance": 70}
++
++
++def test_entries_copy_is_independent_of_later_adds():
++    ledger = Ledger()
++    ledger.add(1, "credit", 1)
++    snapshot = ledger.entries()
++    ledger.add(2, "credit", 1)
++    assert len(snapshot) == 1

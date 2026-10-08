@@ -1,0 +1,30 @@
+diff --git a/tests/roles.test.ts b/tests/roles.test.ts
+index 9cba99d..380f50e 100644
+--- a/tests/roles.test.ts
++++ b/tests/roles.test.ts
+@@ -31,6 +31,16 @@ describe("resolveRole", () => {
+     expect(() => resolveRole({ sub: "u1", role: "Root" }, {})).toThrow("unknown role: Root");
+   });
+ 
++  it("never takes the role from the request body, even when the claims have none", () => {
++    expect(resolveRole({ sub: "u1" }, { role: "admin" })).toBe("guest");
++    expect(resolveRole({ sub: "u1", role: null }, { role: "admin" })).toBe("guest");
++    expect(resolveRole({ sub: "u1", role: "  " }, { role: "admin" })).toBe("guest");
++  });
++
++  it("names an unknown role exactly as received, without trimming", () => {
++    expect(() => resolveRole({ sub: "u1", role: "  Root " }, {})).toThrow("unknown role:   Root ");
++  });
++
+   it("does not treat inherited object keys as roles", () => {
+     expect(() => resolveRole({ sub: "u1", role: "constructor" }, {})).toThrow(RoleError);
+   });
+@@ -58,6 +68,8 @@ describe("isAllowed", () => {
+   it("denies actions outside the role's row", () => {
+     expect(isAllowed("guest", "payment:read")).toBe(false);
+     expect(isAllowed("guest", "payment:create")).toBe(false);
++    expect(isAllowed("guest", "refund:create")).toBe(false);
++    expect(isAllowed("guest", "refund:approve")).toBe(false);
+     expect(isAllowed("user", "refund:create")).toBe(false);
+     expect(isAllowed("user", "refund:approve")).toBe(false);
+     expect(isAllowed("support", "payment:create")).toBe(false);

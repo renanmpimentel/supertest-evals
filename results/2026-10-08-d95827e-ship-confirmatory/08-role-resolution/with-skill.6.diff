@@ -1,0 +1,37 @@
+diff --git a/tests/roles.test.ts b/tests/roles.test.ts
+index 9cba99d..9154099 100644
+--- a/tests/roles.test.ts
++++ b/tests/roles.test.ts
+@@ -31,6 +31,10 @@ describe("resolveRole", () => {
+     expect(() => resolveRole({ sub: "u1", role: "Root" }, {})).toThrow("unknown role: Root");
+   });
+ 
++  it("names an unknown role exactly as received, including whitespace", () => {
++    expect(() => resolveRole({ sub: "u1", role: " Root " }, {})).toThrow("unknown role:  Root ");
++  });
++
+   it("does not treat inherited object keys as roles", () => {
+     expect(() => resolveRole({ sub: "u1", role: "constructor" }, {})).toThrow(RoleError);
+   });
+@@ -64,6 +68,21 @@ describe("isAllowed", () => {
+     expect(isAllowed("support", "refund:approve")).toBe(false);
+   });
+ 
++  it("matches the contract table exactly for every role and action", () => {
++    const table: Record<string, string[]> = {
++      guest: ["catalog:read"],
++      user: ["catalog:read", "payment:create", "payment:read"],
++      support: ["catalog:read", "payment:read", "refund:create"],
++      admin: ["catalog:read", "payment:create", "payment:read", "refund:create", "refund:approve"],
++    };
++    const actions = ["catalog:read", "payment:create", "payment:read", "refund:create", "refund:approve"];
++    for (const [role, allowed] of Object.entries(table)) {
++      for (const action of actions) {
++        expect(isAllowed(role, action), `${role} ${action}`).toBe(allowed.includes(action));
++      }
++    }
++  });
++
+   it("denies unknown actions, even to admin", () => {
+     expect(isAllowed("admin", "user:delete")).toBe(false);
+   });
