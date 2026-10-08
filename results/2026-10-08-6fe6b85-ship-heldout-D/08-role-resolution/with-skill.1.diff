@@ -1,0 +1,25 @@
+diff --git a/tests/roles.test.ts b/tests/roles.test.ts
+index aed7181..0496f17 100644
+--- a/tests/roles.test.ts
++++ b/tests/roles.test.ts
+@@ -11,6 +11,20 @@ describe("resolveRole", () => {
+     expect(resolveRole({ sub: "u1", role: "user" }, { role: "admin" })).toBe("user");
+   });
+ 
++  it("does not take the role from the request body when the claims have none", () => {
++    expect(resolveRole({ sub: "u1" }, { role: "admin" })).toBe("guest");
++    expect(resolveRole({ sub: "u1", role: null }, { role: "admin" })).toBe("guest");
++    expect(resolveRole({ sub: "u1", role: "  " }, { role: "admin" })).toBe("guest");
++  });
++
++  it("does not take the role from the request body when the claim role is unknown", () => {
++    expect(() => resolveRole({ sub: "u1", role: "root" }, { role: "admin" })).toThrow(RoleError);
++  });
++
++  it("names an unknown role exactly as received, including whitespace", () => {
++    expect(() => resolveRole({ sub: "u1", role: "  Root " }, {})).toThrow("unknown role:   Root ");
++  });
++
+   it("trims and lowercases the claim role", () => {
+     expect(resolveRole({ sub: "u1", role: "  Admin " }, {})).toBe("admin");
+     expect(resolveRole({ sub: "u1", role: "SUPPORT" }, {})).toBe("support");

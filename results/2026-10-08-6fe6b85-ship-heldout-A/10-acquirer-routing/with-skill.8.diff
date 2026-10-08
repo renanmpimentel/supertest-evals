@@ -1,0 +1,30 @@
+diff --git a/routing_test.go b/routing_test.go
+index 2507824..05c89b6 100644
+--- a/routing_test.go
++++ b/routing_test.go
+@@ -212,3 +212,25 @@ func TestAmountLimitPerScheme(t *testing.T) {
+ 		}
+ 	}
+ }
++
++// bin8 and bin6 map to different acquirers here, so precedence is observable.
++func TestEightDigitEntryTakesPrecedenceOverSixDigit(t *testing.T) {
++	r := NewRouter(
++		map[string]string{"41111190": "bin8-acq", "37828200": "bin8-only"},
++		map[string]string{"411111": "bin6-acq"},
++	)
++	cases := []struct {
++		name, card, acquirer string
++	}{
++		{"both tables match", visaBin8, "bin8-acq"},
++		{"only bin6 matches", visaBin6Other, "bin6-acq"},
++		{"only bin8 matches", amexBin6, "bin8-only"},
++		{"neither matches", visaPlain, "alpha"},
++	}
++	for _, c := range cases {
++		got, err := r.Route(c.card, "BRL", 1000)
++		if err != nil || got.Acquirer != c.acquirer {
++			t.Errorf("%s: got %+v, %v; want acquirer %s", c.name, got, err, c.acquirer)
++		}
++	}
++}

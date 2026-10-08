@@ -1,0 +1,60 @@
+diff --git a/routing_test.go b/routing_test.go
+index 2507824..4ef74e8 100644
+--- a/routing_test.go
++++ b/routing_test.go
+@@ -212,3 +212,55 @@ func TestAmountLimitPerScheme(t *testing.T) {
+ 		}
+ 	}
+ }
++
++func TestEightDigitEntryWinsOverSixDigitEntry(t *testing.T) {
++	r := NewRouter(
++		map[string]string{"41111190": "bin8-acq"},
++		map[string]string{"411111": "bin6-acq"},
++	)
++	got, err := r.Route(visaBin8, "BRL", 1000)
++	if err != nil || got.Acquirer != "bin8-acq" {
++		t.Errorf("got %+v, %v; want acquirer bin8-acq", got, err)
++	}
++	// Same six digits, different eight: falls back to the six-digit entry.
++	got, err = r.Route(visaBin6Other, "BRL", 1000)
++	if err != nil || got.Acquirer != "bin6-acq" {
++		t.Errorf("got %+v, %v; want acquirer bin6-acq", got, err)
++	}
++}
++
++func TestEightDigitEntryWithoutSixDigitEntry(t *testing.T) {
++	r := NewRouter(map[string]string{"41111190": "bin8-acq"}, nil)
++	got, err := r.Route(visaBin8, "BRL", 1000)
++	if err != nil || got.Acquirer != "bin8-acq" {
++		t.Errorf("got %+v, %v; want acquirer bin8-acq", got, err)
++	}
++	got, err = r.Route(visaBin6, "BRL", 1000)
++	if err != nil || got.Acquirer != "alpha" {
++		t.Errorf("got %+v, %v; want default alpha", got, err)
++	}
++}
++
++func TestShortCardUsesTables(t *testing.T) {
++	r := NewRouter(nil, map[string]string{"400000": "short"})
++	got, err := r.Route(visa12, "BRL", 1000)
++	if err != nil || got.Acquirer != "short" {
++		t.Errorf("got %+v, %v; want acquirer short", got, err)
++	}
++}
++
++func TestOtherWhitespaceIsInvalid(t *testing.T) {
++	for _, card := range []string{"4012888800000008\n", "4012\t8888 0000 0008", "４０１２８８８８０００００００８"} {
++		if err := routeErr(card, "BRL", 1000); !errors.Is(err, ErrInvalidCard) {
++			t.Errorf("card %q: err = %v, want ErrInvalidCard", card, err)
++		}
++	}
++}
++
++func TestMastercard53And55(t *testing.T) {
++	for _, card := range []string{"5300000000000006", "5500000000000004"} {
++		if got := route(t, card, "BRL", 1000); got.Scheme != "mastercard" {
++			t.Errorf("card %s scheme = %s, want mastercard", card, got.Scheme)
++		}
++	}
++}

@@ -1,0 +1,3 @@
+date=2026-10-08T13:31:29-03:00 supertest=6fe6b85 model=sonnet repeats=5 prompt=ship arms=without-skill with-skill
+claude=2.1.286 (Claude Code)
+cases=06-payout-fee

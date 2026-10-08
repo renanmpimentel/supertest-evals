@@ -1,0 +1,53 @@
+diff --git a/routing_test.go b/routing_test.go
+index 2507824..70df385 100644
+--- a/routing_test.go
++++ b/routing_test.go
+@@ -212,3 +212,48 @@ func TestAmountLimitPerScheme(t *testing.T) {
+ 		}
+ 	}
+ }
++
++func TestEightDigitEntryTakesPrecedenceOverSixDigit(t *testing.T) {
++	r := NewRouter(
++		map[string]string{"40123450": "golf"},
++		map[string]string{"401234": "hotel"},
++	)
++	cases := []struct{ card, acquirer string }{
++		{"40123450000000005", "golf"},  // both tables match: 8 digits wins
++		{"40123400000000000", "hotel"}, // only the 6-digit entry matches
++	}
++	for _, c := range cases {
++		got, err := r.Route(c.card, "BRL", 1000)
++		if err != nil || got.Acquirer != c.acquirer {
++			t.Errorf("card %s = %+v, %v; want acquirer %s", c.card, got, err, c.acquirer)
++		}
++	}
++	// Only an 8-digit entry, no 6-digit one.
++	only8 := NewRouter(map[string]string{"40123450": "golf"}, nil)
++	if got, err := only8.Route("40123450000000005", "BRL", 1000); err != nil || got.Acquirer != "golf" {
++		t.Errorf("got %+v, %v; want acquirer golf", got, err)
++	}
++}
++
++func TestCharactersAdjacentToDigitsAreInvalid(t *testing.T) {
++	// '/' and ':' sit right below '0' and above '9' in ASCII; these numbers
++	// would pass the Luhn check if the character were read as a digit.
++	for _, card := range []string{"401288880000006/", "40128888000001/", "401288880000004:", "40128888000005:"} {
++		if err := routeErr(card, "BRL", 1000); !errors.Is(err, ErrInvalidCard) {
++			t.Errorf("card %q: err = %v, want ErrInvalidCard", card, err)
++		}
++	}
++}
++
++func TestOnlyTheLuhnCheckDigitIsAccepted(t *testing.T) {
++	for d := 0; d <= 9; d++ {
++		card := "401288880000000" + string(rune('0'+d))
++		err := routeErr(card, "BRL", 1000)
++		if d == 8 && err != nil {
++			t.Errorf("card %s: unexpected error %v", card, err)
++		}
++		if d != 8 && !errors.Is(err, ErrInvalidCard) {
++			t.Errorf("card %s: err = %v, want ErrInvalidCard", card, err)
++		}
++	}
++}

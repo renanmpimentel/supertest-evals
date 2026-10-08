@@ -1,0 +1,27 @@
+diff --git a/tests/validators.test.ts b/tests/validators.test.ts
+index 7402e3e..e9862bd 100644
+--- a/tests/validators.test.ts
++++ b/tests/validators.test.ts
+@@ -12,7 +12,7 @@ type Validator = (value: string) => string;
+ // Every input in the list must be rejected with a ValidationError.
+ function expectAllRejected(validate: Validator, inputs: readonly string[]) {
+   for (const input of inputs) {
+-    expect(() => validateMerchantId(input), `should reject ${JSON.stringify(input)}`).toThrow(
++    expect(() => validate(input), `should reject ${JSON.stringify(input)}`).toThrow(
+       ValidationError,
+     );
+   }
+@@ -126,6 +126,13 @@ describe("validateWebhookUrl", () => {
+     expect(() => validateWebhookUrl("")).toThrow(ValidationError);
+   });
+ 
++  it("rejects a user name, a password or both in the URL", () => {
++    const message = "webhook url must not contain credentials";
++    expect(() => validateWebhookUrl("https://user:secret@hooks.example.com/pay")).toThrow(message);
++    expect(() => validateWebhookUrl("https://user@hooks.example.com/pay")).toThrow(message);
++    expect(() => validateWebhookUrl("https://:secret@hooks.example.com/pay")).toThrow(message);
++  });
++
+   it("rejects localhost, in any case, and IP addresses", () => {
+     const message = "webhook url must not target localhost or an IP address";
+     expect(() => validateWebhookUrl("https://localhost/hook")).toThrow(message);

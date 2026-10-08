@@ -1,0 +1,23 @@
+diff --git a/routing_test.go b/routing_test.go
+index 2507824..3875873 100644
+--- a/routing_test.go
++++ b/routing_test.go
+@@ -212,3 +212,18 @@ func TestAmountLimitPerScheme(t *testing.T) {
+ 		}
+ 	}
+ }
++
++func TestEightDigitEntryWinsOverSixDigitEntry(t *testing.T) {
++	r := NewRouter(
++		map[string]string{"41111190": "delta"},
++		map[string]string{"411111": "golf"},
++	)
++	got, err := r.Route(visaBin8, "BRL", 1000)
++	if err != nil || got.Acquirer != "delta" {
++		t.Errorf("got %+v, %v; want acquirer delta from the 8-digit entry", got, err)
++	}
++	got, err = r.Route(visaBin6Other, "BRL", 1000)
++	if err != nil || got.Acquirer != "golf" {
++		t.Errorf("got %+v, %v; want acquirer golf from the 6-digit entry", got, err)
++	}
++}

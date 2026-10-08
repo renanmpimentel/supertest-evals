@@ -1,0 +1,33 @@
+diff --git a/routing_test.go b/routing_test.go
+index 2507824..0092373 100644
+--- a/routing_test.go
++++ b/routing_test.go
+@@ -141,7 +141,7 @@ func TestInvalidCardNumbers(t *testing.T) {
+ }
+ 
+ func TestCardLengthLimits(t *testing.T) {
+-	for _, card := range []string{visa12, visa13, visa19} {
++	for _, card := range []string{visa12, visa13, "40000000000002", "400000000000006", "4000000000000002", "40000000000000006", "400000000000000002", visa19} {
+ 		if err := routeErr(card, "BRL", 1000); err != nil {
+ 			t.Errorf("card %s: unexpected error %v", card, err)
+ 		}
+@@ -212,3 +212,19 @@ func TestAmountLimitPerScheme(t *testing.T) {
+ 		}
+ 	}
+ }
++
++func TestEightDigitEntryTakesPrecedenceOverSixDigitEntry(t *testing.T) {
++	r := NewRouter(
++		map[string]string{"40128888": "golf"},
++		map[string]string{"401288": "hotel"},
++	)
++	got, err := r.Route(visaPlain, "BRL", 1000)
++	if err != nil || got.Acquirer != "golf" {
++		t.Errorf("got %+v, %v; want acquirer golf", got, err)
++	}
++	// Same six digits, different eighth-digit prefix: only the six-digit entry matches.
++	got, err = r.Route("4012881100000000", "BRL", 1000)
++	if err != nil || got.Acquirer != "hotel" {
++		t.Errorf("got %+v, %v; want acquirer hotel", got, err)
++	}
++}

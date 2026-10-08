@@ -1,0 +1,28 @@
+diff --git a/tests/roles.test.ts b/tests/roles.test.ts
+index aed7181..1d01962 100644
+--- a/tests/roles.test.ts
++++ b/tests/roles.test.ts
+@@ -11,6 +11,12 @@ describe("resolveRole", () => {
+     expect(resolveRole({ sub: "u1", role: "user" }, { role: "admin" })).toBe("user");
+   });
+ 
++  it("does not fall back to the request body role when the claims have none", () => {
++    expect(resolveRole({ sub: "u1" }, { role: "admin" })).toBe("guest");
++    expect(resolveRole({ sub: "u1", role: null }, { role: "admin" })).toBe("guest");
++    expect(resolveRole({ sub: "u1", role: "  " }, { role: "admin" })).toBe("guest");
++  });
++
+   it("trims and lowercases the claim role", () => {
+     expect(resolveRole({ sub: "u1", role: "  Admin " }, {})).toBe("admin");
+     expect(resolveRole({ sub: "u1", role: "SUPPORT" }, {})).toBe("support");
+@@ -31,6 +37,10 @@ describe("resolveRole", () => {
+     expect(() => resolveRole({ sub: "u1", role: "Root" }, {})).toThrow("unknown role: Root");
+   });
+ 
++  it("names the unknown role exactly as received, without trimming", () => {
++    expect(() => resolveRole({ sub: "u1", role: "  Root " }, {})).toThrow("unknown role:   Root ");
++  });
++
+   it("does not treat inherited object keys as roles", () => {
+     expect(() => resolveRole({ sub: "u1", role: "constructor" }, {})).toThrow(RoleError);
+   });

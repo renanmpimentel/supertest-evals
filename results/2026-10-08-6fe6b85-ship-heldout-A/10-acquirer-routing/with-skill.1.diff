@@ -1,0 +1,32 @@
+diff --git a/routing_test.go b/routing_test.go
+index 2507824..c4d70db 100644
+--- a/routing_test.go
++++ b/routing_test.go
+@@ -212,3 +212,27 @@ func TestAmountLimitPerScheme(t *testing.T) {
+ 		}
+ 	}
+ }
++
++// The 8-digit entry must win over the 6-digit one, and each level must answer
++// differently from the next so a broken level cannot hide behind it.
++func TestEightDigitEntryTakesPrecedenceOverSixDigit(t *testing.T) {
++	r := NewRouter(
++		map[string]string{"41111190": "bin8-acq", "55555500": "bin8-acq", "37828200": "bin8-acq"},
++		map[string]string{"411111": "bin6-acq", "555555": "bin6-acq", "378282": "bin6-acq"},
++	)
++	cases := []struct {
++		card, acquirer string
++	}{
++		{visaBin8, "bin8-acq"},      // both tables match: bin8 wins
++		{visaBin6Other, "bin6-acq"}, // only bin6 matches
++		{visaPlain, "alpha"},        // neither matches
++		{mastercardBin8, "bin8-acq"},
++		{"378282000000008", "bin8-acq"},
++	}
++	for _, c := range cases {
++		got, err := r.Route(c.card, "BRL", 1000)
++		if err != nil || got.Acquirer != c.acquirer {
++			t.Errorf("card %s = %+v, %v; want acquirer %s", c.card, got, err, c.acquirer)
++		}
++	}
++}

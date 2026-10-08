@@ -1,0 +1,38 @@
+diff --git a/routing_test.go b/routing_test.go
+index 2507824..7def906 100644
+--- a/routing_test.go
++++ b/routing_test.go
+@@ -212,3 +212,33 @@ func TestAmountLimitPerScheme(t *testing.T) {
+ 		}
+ 	}
+ }
++
++// The 8-digit table wins over the 6-digit table only if the two disagree.
++func TestEightDigitEntryTakesPrecedenceOverSixDigitEntry(t *testing.T) {
++	r := NewRouter(
++		map[string]string{"41111100": "golf", "37828200": "hotel"},
++		map[string]string{"411111": "delta", "378282": "foxtrot"},
++	)
++	cases := []struct{ card, want string }{
++		{visaBin6, "golf"},   // 41111100... matches both tables
++		{amexBin6, "hotel"},  // 37828200... matches both tables
++		{visaBin8, "delta"},  // 41111190... matches only bin6
++		{visaPlain, "alpha"}, // matches neither
++	}
++	for _, c := range cases {
++		got, err := r.Route(c.card, "BRL", 1000)
++		if err != nil || got.Acquirer != c.want {
++			t.Errorf("card %s = %+v, %v; want acquirer %s", c.card, got, err, c.want)
++		}
++	}
++}
++
++// An 8-digit entry must be keyed on exactly the first 8 digits.
++func TestEightDigitEntryMatchesFullPrefixOnly(t *testing.T) {
++	r := NewRouter(map[string]string{"41111100": "golf"}, nil)
++	for _, card := range []string{visaBin8, visaBin6Other} { // 41111190, 41111111
++		if got, _ := r.Route(card, "BRL", 1000); got.Acquirer != "alpha" {
++			t.Errorf("card %s acquirer = %s, want alpha", card, got.Acquirer)
++		}
++	}
++}

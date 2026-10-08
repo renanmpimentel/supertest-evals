@@ -1,0 +1,3 @@
+date=2026-10-08T13:02:56-03:00 supertest=328e6eb model=sonnet repeats=10 prompt=ship arms=with-skill
+claude=2.1.286 (Claude Code)
+cases=10-acquirer-routing 11-payment-identifiers

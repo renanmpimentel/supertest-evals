@@ -1,0 +1,39 @@
+diff --git a/routing_test.go b/routing_test.go
+index 2507824..d23700b 100644
+--- a/routing_test.go
++++ b/routing_test.go
+@@ -132,6 +132,7 @@ func TestInvalidCardNumbers(t *testing.T) {
+ 		"amex 16":                          amex16,
+ 		"only separators":                  " - - ",
+ 		"separators and text":              "4111 1100 0000 000a",
++		"char just above the digits":       "40000000000:10",
+ 	}
+ 	for name, card := range cases {
+ 		if err := routeErr(card, "BRL", 1000); !errors.Is(err, ErrInvalidCard) {
+@@ -212,3 +213,26 @@ func TestAmountLimitPerScheme(t *testing.T) {
+ 		}
+ 	}
+ }
++
++func TestEightDigitEntryWinsOverSixDigitEntry(t *testing.T) {
++	r := NewRouter(
++		map[string]string{"41111190": "golf", "55555500": "hotel", "37828200": "india"},
++		map[string]string{"411111": "delta", "555555": "echo", "378282": "foxtrot"},
++	)
++	cases := []struct{ card, acquirer string }{
++		{visaBin8, "golf"},
++		{mastercardBin8, "hotel"},
++		{visaBin6Other, "delta"}, // same six digits, different eight: falls back to bin6
++	}
++	for _, c := range cases {
++		got, err := r.Route(c.card, "BRL", 1000)
++		if err != nil || got.Acquirer != c.acquirer {
++			t.Errorf("card %s = %+v, %v; want acquirer %s", c.card, got, err, c.acquirer)
++		}
++	}
++	// A bin8-only entry (no bin6 entry) must also be honored.
++	r = NewRouter(map[string]string{"40128888": "golf"}, nil)
++	if got, err := r.Route(visaPlain, "BRL", 1000); err != nil || got.Acquirer != "golf" {
++		t.Errorf("bin8-only: got %+v, %v; want acquirer golf", got, err)
++	}
++}

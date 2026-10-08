@@ -1,0 +1,26 @@
+diff --git a/routing_test.go b/routing_test.go
+index 2507824..f5dd0d4 100644
+--- a/routing_test.go
++++ b/routing_test.go
+@@ -212,3 +212,21 @@ func TestAmountLimitPerScheme(t *testing.T) {
+ 		}
+ 	}
+ }
++
++func TestEightDigitEntryTakesPrecedenceOverSixDigit(t *testing.T) {
++	r := NewRouter(
++		map[string]string{"40128888": "golf", "51000000": "golf", "34000000": "golf"},
++		map[string]string{"401288": "hotel", "510000": "hotel", "340000": "hotel"},
++	)
++	for _, card := range []string{visaPlain, mastercard51, amex34} {
++		got, err := r.Route(card, "BRL", 1000)
++		if err != nil || got.Acquirer != "golf" {
++			t.Errorf("card %s = %+v, %v; want acquirer golf from the 8-digit entry", card, got, err)
++		}
++	}
++	// Same 6 digits, different 8th-digit prefix: only the 6-digit entry matches.
++	got, err := r.Route("4012889900000005", "BRL", 1000)
++	if err != nil || got.Acquirer != "hotel" {
++		t.Errorf("got %+v, %v; want acquirer hotel from the 6-digit entry", got, err)
++	}
++}

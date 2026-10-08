@@ -1,0 +1,25 @@
+diff --git a/tests/roles.test.ts b/tests/roles.test.ts
+index aed7181..827314d 100644
+--- a/tests/roles.test.ts
++++ b/tests/roles.test.ts
+@@ -26,6 +26,20 @@ describe("resolveRole", () => {
+     expect(resolveRole({ sub: "u1", role: "   " }, {})).toBe("guest");
+   });
+ 
++  it("does not take a role from the request body when the claims have none", () => {
++    expect(resolveRole({ sub: "u1" }, { role: "admin" })).toBe("guest");
++    expect(resolveRole({ sub: "u1", role: null }, { role: "admin" })).toBe("guest");
++  });
++
++  it("does not take a role from the request body when the claim role is blank", () => {
++    expect(resolveRole({ sub: "u1", role: "" }, { role: "admin" })).toBe("guest");
++    expect(resolveRole({ sub: "u1", role: "  " }, { role: "admin" })).toBe("guest");
++  });
++
++  it("rejects an unknown claim role even if the request body names a known one", () => {
++    expect(() => resolveRole({ sub: "u1", role: "root" }, { role: "admin" })).toThrow(RoleError);
++  });
++
+   it("rejects an unknown role, naming it as received", () => {
+     expect(() => resolveRole({ sub: "u1", role: "Root" }, {})).toThrow(RoleError);
+     expect(() => resolveRole({ sub: "u1", role: "Root" }, {})).toThrow("unknown role: Root");

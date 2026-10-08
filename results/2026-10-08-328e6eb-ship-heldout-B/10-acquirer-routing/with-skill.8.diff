@@ -1,0 +1,37 @@
+diff --git a/routing_test.go b/routing_test.go
+index 2507824..a81d6ec 100644
+--- a/routing_test.go
++++ b/routing_test.go
+@@ -212,3 +212,32 @@ func TestAmountLimitPerScheme(t *testing.T) {
+ 		}
+ 	}
+ }
++
++func TestEightDigitEntryTakesPrecedenceOverSixDigitEntry(t *testing.T) {
++	r := NewRouter(
++		map[string]string{"41111190": "golf"},
++		map[string]string{"411111": "delta"},
++	)
++	cases := []struct {
++		name, card, acquirer string
++	}{
++		{"bin8 and bin6 both match", visaBin8, "golf"},
++		{"only bin6 matches", visaBin6, "delta"},
++	}
++	for _, c := range cases {
++		got, err := r.Route(c.card, "BRL", 1000)
++		if err != nil || got.Acquirer != c.acquirer {
++			t.Errorf("%s: got %+v, %v; want acquirer %s", c.name, got, err, c.acquirer)
++		}
++	}
++}
++
++func TestEightDigitEntryOnlyWithoutSixDigitEntry(t *testing.T) {
++	r := NewRouter(map[string]string{"41111190": "golf"}, nil)
++	if got, err := r.Route(visaBin8, "BRL", 1000); err != nil || got.Acquirer != "golf" {
++		t.Errorf("got %+v, %v; want acquirer golf", got, err)
++	}
++	if got, err := r.Route(visaBin6, "BRL", 1000); err != nil || got.Acquirer != "alpha" {
++		t.Errorf("got %+v, %v; want scheme default alpha", got, err)
++	}
++}

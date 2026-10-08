@@ -1,0 +1,46 @@
+diff --git a/routing_test.go b/routing_test.go
+index 2507824..4c8d643 100644
+--- a/routing_test.go
++++ b/routing_test.go
+@@ -131,6 +131,8 @@ func TestInvalidCardNumbers(t *testing.T) {
+ 		"amex 14":                          amex14,
+ 		"amex 16":                          amex16,
+ 		"only separators":                  " - - ",
++		"char before 0 (byte below 0)":     "401288880000006/",
++		"char after 9 (byte above 9)":      "4012888800000:08",
+ 		"separators and text":              "4111 1100 0000 000a",
+ 	}
+ 	for name, card := range cases {
+@@ -212,3 +214,32 @@ func TestAmountLimitPerScheme(t *testing.T) {
+ 		}
+ 	}
+ }
++
++func TestEightDigitEntryWinsOverSixDigitEntry(t *testing.T) {
++	r := NewRouter(
++		map[string]string{"41111190": "bin8-acq"},
++		map[string]string{"411111": "bin6-acq"},
++	)
++	got, err := r.Route(visaBin8, "BRL", 1000)
++	if err != nil || got.Acquirer != "bin8-acq" {
++		t.Errorf("got %+v, %v; want acquirer bin8-acq", got, err)
++	}
++	// Same six digits, different eighth: only the six-digit entry matches.
++	got, err = r.Route(visaBin6Other, "BRL", 1000)
++	if err != nil || got.Acquirer != "bin6-acq" {
++		t.Errorf("got %+v, %v; want acquirer bin6-acq", got, err)
++	}
++}
++
++func TestEightDigitEntryWithoutSixDigitEntry(t *testing.T) {
++	r := NewRouter(map[string]string{"41111190": "bin8-acq"}, nil)
++	got, err := r.Route(visaBin8, "BRL", 1000)
++	if err != nil || got.Acquirer != "bin8-acq" {
++		t.Errorf("got %+v, %v; want acquirer bin8-acq", got, err)
++	}
++	// A different card sharing only the first seven digits must not match.
++	got, err = r.Route("4111119100000005", "BRL", 1000)
++	if err != nil || got.Acquirer != "alpha" {
++		t.Errorf("got %+v, %v; want acquirer alpha", got, err)
++	}
++}

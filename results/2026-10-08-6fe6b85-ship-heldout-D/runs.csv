@@ -1,0 +1,6 @@
+case,kind,arm,run,verdict,verdict_ok,fix_check,prod_intact,test_lines,skill_loaded,cost_usd,turns,seconds
+08-role-resolution,gap,with-skill,1,inadequate,yes,pass,yes,14,yes,0.12150260000000002,8,59
+08-role-resolution,gap,with-skill,2,inadequate,yes,pass,yes,10,yes,0.1230674,9,43
+08-role-resolution,gap,with-skill,3,inadequate,yes,pass,yes,14,yes,0.1293544,8,56
+08-role-resolution,gap,with-skill,4,inadequate,yes,pass,yes,14,yes,0.1237226,9,46
+08-role-resolution,gap,with-skill,5,inadequate,yes,pass,yes,10,yes,0.13866820000000002,10,86

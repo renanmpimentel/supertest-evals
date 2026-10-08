@@ -1,0 +1,42 @@
+diff --git a/routing_test.go b/routing_test.go
+index 2507824..59e35b6 100644
+--- a/routing_test.go
++++ b/routing_test.go
+@@ -132,6 +132,8 @@ func TestInvalidCardNumbers(t *testing.T) {
+ 		"amex 16":                          amex16,
+ 		"only separators":                  " - - ",
+ 		"separators and text":              "4111 1100 0000 000a",
++		"colon with a luhn-neutral value":  "400000000000001:", // ':' follows '9'; valid if counted as 10
++		"slash with a luhn-neutral value":  "400000000000008/", // valid if '/' were accepted as a digit (byte wraps to 255)
+ 	}
+ 	for name, card := range cases {
+ 		if err := routeErr(card, "BRL", 1000); !errors.Is(err, ErrInvalidCard) {
+@@ -212,3 +214,28 @@ func TestAmountLimitPerScheme(t *testing.T) {
+ 		}
+ 	}
+ }
++
++func TestEightDigitEntryWinsOverSixDigitEntry(t *testing.T) {
++	r := NewRouter(
++		map[string]string{"40128888": "bin8-acquirer"},
++		map[string]string{"401288": "bin6-acquirer"},
++	)
++	got, err := r.Route(visaPlain, "BRL", 1000)
++	if err != nil || got.Acquirer != "bin8-acquirer" {
++		t.Errorf("got %+v, %v; want acquirer bin8-acquirer", got, err)
++	}
++}
++
++func TestEightDigitEntryWithoutSixDigitEntry(t *testing.T) {
++	r := NewRouter(map[string]string{"40128888": "bin8-acquirer"}, nil)
++	got, err := r.Route(visaPlain, "BRL", 1000)
++	if err != nil || got.Acquirer != "bin8-acquirer" {
++		t.Errorf("got %+v, %v; want acquirer bin8-acquirer", got, err)
++	}
++}
++
++func TestVisaAnyLeadingFour(t *testing.T) {
++	if got := route(t, "4900000000000003", "BRL", 1000); got.Scheme != "visa" {
++		t.Errorf("scheme = %s, want visa", got.Scheme)
++	}
++}

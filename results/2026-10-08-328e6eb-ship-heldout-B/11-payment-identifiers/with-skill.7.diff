@@ -1,0 +1,27 @@
+diff --git a/tests/validators.test.ts b/tests/validators.test.ts
+index 7402e3e..25ef3ad 100644
+--- a/tests/validators.test.ts
++++ b/tests/validators.test.ts
+@@ -12,7 +12,7 @@ type Validator = (value: string) => string;
+ // Every input in the list must be rejected with a ValidationError.
+ function expectAllRejected(validate: Validator, inputs: readonly string[]) {
+   for (const input of inputs) {
+-    expect(() => validateMerchantId(input), `should reject ${JSON.stringify(input)}`).toThrow(
++    expect(() => validate(input), `should reject ${JSON.stringify(input)}`).toThrow(
+       ValidationError,
+     );
+   }
+@@ -135,6 +135,13 @@ describe("validateWebhookUrl", () => {
+     expect(() => validateWebhookUrl("https://[::1]:8443/hook")).toThrow(message);
+   });
+ 
++  it("rejects a user name or a password in the URL", () => {
++    const message = "webhook url must not contain credentials";
++    expect(() => validateWebhookUrl("https://user:secret@hooks.example.com/pay")).toThrow(message);
++    expect(() => validateWebhookUrl("https://user@hooks.example.com/pay")).toThrow(message);
++    expect(() => validateWebhookUrl("https://:secret@hooks.example.com/pay")).toThrow(message);
++  });
++
+   it("accepts 2,048 characters and rejects 2,049", () => {
+     expect(validateWebhookUrl(urlOfLength(2048))).toHaveLength(2048);
+     expect(() => validateWebhookUrl(urlOfLength(2049))).toThrow("webhook url is too long");

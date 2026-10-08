@@ -1,0 +1,43 @@
+diff --git a/routing_test.go b/routing_test.go
+index 2507824..9f8749a 100644
+--- a/routing_test.go
++++ b/routing_test.go
+@@ -17,8 +17,8 @@ const (
+ 	visa11         = "40000000006"
+ 	visa20         = "40000000000000000002"
+ 	mastercard51   = "5100000000000008"
+-	mastercardBin6 = "5555550000000002" // 555555
+-	mastercardBin8 = "5555550000000002"
++	mastercardBin6 = "5555560000000001" // 555556
++	mastercardBin8 = "5555550000000002" // 55555500, also 555555
+ 	mastercard52   = "5200000000000007"
+ 	mastercard54   = "5400000000000005"
+ 	mastercard50   = "5000000000000009"
+@@ -39,8 +39,8 @@ const (
+ 
+ func newTestRouter() *Router {
+ 	return NewRouter(
+-		map[string]string{"41111190": "delta", "55555500": "echo"},
+-		map[string]string{"411111": "delta", "555555": "echo", "378282": "foxtrot"},
++		map[string]string{"41111190": "golf", "55555500": "hotel"},
++		map[string]string{"411111": "delta", "555555": "echo", "555556": "echo", "378282": "foxtrot"},
+ 	)
+ }
+ 
+@@ -93,11 +93,12 @@ func TestSixDigitEntryOverridesSchemeDefault(t *testing.T) {
+ }
+ 
+ func TestEightDigitEntryIsUsed(t *testing.T) {
+-	if got := route(t, visaBin8, "BRL", 1000); got.Acquirer != "delta" {
+-		t.Errorf("acquirer = %s, want delta", got.Acquirer)
++	// The bin8 entry wins over the bin6 entry (delta / echo) for the same card.
++	if got := route(t, visaBin8, "BRL", 1000); got.Acquirer != "golf" {
++		t.Errorf("acquirer = %s, want golf", got.Acquirer)
+ 	}
+-	if got := route(t, mastercardBin8, "BRL", 1000); got.Acquirer != "echo" {
+-		t.Errorf("acquirer = %s, want echo", got.Acquirer)
++	if got := route(t, mastercardBin8, "BRL", 1000); got.Acquirer != "hotel" {
++		t.Errorf("acquirer = %s, want hotel", got.Acquirer)
+ 	}
+ }
+ 
