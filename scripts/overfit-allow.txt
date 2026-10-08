@@ -7,6 +7,7 @@
 # user: "unless the user sets another" (budget guidance)
 # validation: "validation and decision-guard contracts" (risk ordering)
 # vitest: a Necessist framework name in references/tools.md
+# exactly, used: boundary-probe wording ("only exactly at it", "a constant ... used with <"); target: "the target CI" in pipeline.md
 30
 claims
 committed
@@ -23,3 +24,6 @@ user
 validation
 vitest
 which
+exactly
+target
+used
