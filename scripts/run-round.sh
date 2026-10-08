@@ -11,7 +11,8 @@
 #
 # Env: MODEL (default sonnet), REPEATS (default 1), MAX_PARALLEL (default 3),
 #      SUPERTEST_REPO (default ~/export/supertest), ROUND_SUFFIX (appended to the
-#      results folder name), RESUME=1 (rerun only the runs of an existing round
+#      results folder name), SUPERTEST_SHA (skill commit to evaluate instead of
+#      SUPERTEST_VERSION), ARMS (default "without-skill with-skill"), RESUME=1 (rerun only the runs of an existing round
 #      folder that have no successful result, e.g. after a usage limit).
 # When a run hits the account usage limit, no further runs are launched.
 # Evidence per run in results/<date>-<sha>-<prompt>/<case>/<arm>.<n>.*;
@@ -52,7 +53,8 @@ model="${MODEL:-sonnet}"
 repeats="${REPEATS:-1}"
 max_parallel="${MAX_PARALLEL:-3}"
 repo="${SUPERTEST_REPO:-$HOME/export/supertest}"
-sha="$(tr -d '[:space:]' < "$root/SUPERTEST_VERSION")"
+sha="${SUPERTEST_SHA:-$(tr -d '[:space:]' < "$root/SUPERTEST_VERSION")}"
+read -r -a arms <<< "${ARMS:-without-skill with-skill}"
 if ! git -C "$repo" cat-file -e "$sha^{commit}" 2>/dev/null; then
   echo "cannot resolve Supertest commit '$sha' in $repo (set SUPERTEST_REPO)" >&2
   exit 2
@@ -66,6 +68,8 @@ if [[ -n "$resume" ]]; then
   fi
   read -r -a cases <<< "$(sed -n 's/^cases=//p' "$out/round.txt")"
   repeats="$(sed -n 's/.* repeats=\([0-9]*\).*/\1/p' "$out/round.txt")"
+  read -r -a arms <<< "$(sed -n 's/.* arms=\(.*\)$/\1/p' "$out/round.txt")"
+  (( ${#arms[@]} )) || arms=(without-skill with-skill)
 elif [[ -e "$out" ]]; then
   echo "results folder already exists: $out" >&2
   exit 1
@@ -137,7 +141,7 @@ rm -f "$out/.limit"
 if [[ -z "$resume" ]]; then
   : > "$out/runs.log"
   {
-    echo "date=$(date -Is) supertest=$sha model=$model repeats=$repeats prompt=$prompt_name"
+    echo "date=$(date -Is) supertest=$sha model=$model repeats=$repeats prompt=$prompt_name arms=${arms[*]}"
     echo "claude=$(claude --version 2>/dev/null | head -1)"
     echo "cases=${cases[*]}"
   } > "$out/round.txt"
@@ -150,7 +154,7 @@ for case in "${cases[@]}"; do
   mkdir -p "$out/$case"
   [[ -n "$resume" ]] || : > "$out/$case/arms.txt"
   for n in $(seq 1 "$repeats"); do
-    for arm in without-skill with-skill; do
+    for arm in "${arms[@]}"; do
       done_ok "$case" "$arm.$n" && continue
       rm -f "$out/$case/$arm.$n".*
       jobs_list+=("$case $arm $n")
@@ -187,7 +191,7 @@ done
 wait || true
 
 echo "results: $out"
-expected=$(( ${#cases[@]} * repeats * 2 ))
+expected=$(( ${#cases[@]} * repeats * ${#arms[@]} ))
 ok="$(grep -cE 'exit=0 seconds=[0-9]+ error=none$' "$out/runs.log" || true)"
 echo "summary: $ok of $expected runs succeeded"
 (( ok == expected ))
