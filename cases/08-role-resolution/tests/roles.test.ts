@@ -36,32 +36,35 @@ describe("resolveRole", () => {
   });
 });
 
+const ACTIONS = [
+  "catalog:read",
+  "payment:create",
+  "payment:read",
+  "refund:create",
+  "refund:approve",
+] as const;
+
+const TABLE: Record<string, readonly string[]> = {
+  guest: ["catalog:read"],
+  user: ["catalog:read", "payment:create", "payment:read"],
+  support: ["catalog:read", "payment:read", "refund:create"],
+  admin: ["catalog:read", "payment:create", "payment:read", "refund:create", "refund:approve"],
+};
+
 describe("isAllowed", () => {
-  it("allows every action in the role's row", () => {
-    expect(isAllowed("guest", "catalog:read")).toBe(true);
-    expect(isAllowed("user", "payment:create")).toBe(true);
-    expect(isAllowed("user", "payment:read")).toBe(true);
-    expect(isAllowed("support", "payment:read")).toBe(true);
-    expect(isAllowed("support", "refund:create")).toBe(true);
-    expect(isAllowed("admin", "payment:create")).toBe(true);
-    expect(isAllowed("admin", "payment:read")).toBe(true);
-    expect(isAllowed("admin", "refund:create")).toBe(true);
-    expect(isAllowed("admin", "refund:approve")).toBe(true);
-  });
+  for (const [role, allowed] of Object.entries(TABLE)) {
+    for (const action of ACTIONS) {
+      const expected = allowed.includes(action);
+      it(`${expected ? "allows" : "denies"} ${action} to ${role}`, () => {
+        expect(isAllowed(role, action)).toBe(expected);
+      });
+    }
+  }
 
   it("allows catalog:read to every role", () => {
     for (const role of ["guest", "user", "support", "admin"]) {
       expect(isAllowed(role, "catalog:read")).toBe(true);
     }
-  });
-
-  it("denies actions outside the role's row", () => {
-    expect(isAllowed("guest", "payment:read")).toBe(false);
-    expect(isAllowed("guest", "payment:create")).toBe(false);
-    expect(isAllowed("user", "refund:create")).toBe(false);
-    expect(isAllowed("user", "refund:approve")).toBe(false);
-    expect(isAllowed("support", "payment:create")).toBe(false);
-    expect(isAllowed("support", "refund:approve")).toBe(false);
   });
 
   it("denies unknown actions, even to admin", () => {

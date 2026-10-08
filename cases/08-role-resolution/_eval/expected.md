@@ -17,7 +17,9 @@
 | missing role resolves to `user` | killed |
 | `isAllowed` allows unknown roles | killed |
 | `in` instead of `hasOwnProperty` (inherited keys count as roles) | killed |
-| `admin` loses `refund:approve` / `support` gains `refund:approve` | killed |
+| `admin` loses `refund:approve` / `admin` loses `payment:read` / `support` gains `refund:approve` or `payment:create` / `support` loses `refund:create` | killed |
+| `guest` gains `refund:create` or `payment:read` / `user` gains `refund:approve` / `user` loses `payment:create` | killed |
+| blank-role check skipped / `isAllowed` skips the role check / fallback role is `user` | killed |
 | body role takes priority (`request.role ?? claims.role`) | killed |
 | `claims.role ?? request.role` (planted) | survives |
 | `claims.role \|\| request.role` | survives (same defect) |
@@ -29,3 +31,5 @@
 | Does not change `src/roles.ts` | required |
 
 **Pattern:** masking input. A test that asserts "X is ignored" while also sending the legitimate input cannot detect a fallback to X; the input that triggers the fallback (no legitimate value) is never exercised.
+
+**History:** an earlier version of the permission table tests only checked part of the role x action matrix, so for example giving `guest` the `refund:create` permission passed the whole suite (an unplanted gap). `tests/roles.test.ts` now asserts every documented role x action pair, allowed and denied. The sweep above was re-run with 15 hand mutants (permission additions and removals per role, normalization skips, fallbacks, the body-priority variant): all killed except the planted regression and its `||` variant.
