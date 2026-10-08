@@ -11,7 +11,9 @@
 #
 # Env: MODEL (default sonnet), REPEATS (default 1), MAX_PARALLEL (default 3),
 #      SUPERTEST_REPO (default ~/export/supertest), ROUND_SUFFIX (appended to the
-#      results folder name).
+#      results folder name), RESUME=1 (rerun only the runs of an existing round
+#      folder that have no successful result, e.g. after a usage limit).
+# When a run hits the account usage limit, no further runs are launched.
 # Evidence per run in results/<date>-<sha>-<prompt>/<case>/<arm>.<n>.*;
 # score it with scripts/score-round.sh. Exits non-zero if any run failed.
 # Cleanup (INT, TERM, EXIT): each agent runs in its own session (setsid) and its
@@ -56,7 +58,15 @@ if ! git -C "$repo" cat-file -e "$sha^{commit}" 2>/dev/null; then
   exit 2
 fi
 out="$root/results/$(date +%F)-$sha-$prompt_name${ROUND_SUFFIX:+-$ROUND_SUFFIX}"
-if [[ -e "$out" ]]; then
+resume="${RESUME:-}"
+if [[ -n "$resume" ]]; then
+  if [[ ! -f "$out/round.txt" ]]; then
+    echo "nothing to resume: $out/round.txt not found" >&2
+    exit 2
+  fi
+  read -r -a cases <<< "$(sed -n 's/^cases=//p' "$out/round.txt")"
+  repeats="$(sed -n 's/.* repeats=\([0-9]*\).*/\1/p' "$out/round.txt")"
+elif [[ -e "$out" ]]; then
   echo "results folder already exists: $out" >&2
   exit 1
 fi
@@ -109,6 +119,10 @@ run_one() {
     status=$?
     rm -f "$out/.pids/$case.$id"
     jq -r 'select(.type=="result") | .result // empty' "$dir/$id.transcript.jsonl" > "$dir/$id.md" || errs="$errs report"
+    if grep -qiE "hit your (session|usage) limit|usage limit reached" "$dir/$id.md"; then
+      errs="$errs usage_limit"
+      touch "$out/.limit"
+    fi
     git -C "$copy" add -A || errs="$errs add"
     git -C "$copy" diff --cached --binary baseline > "$dir/$id.diff" || errs="$errs diff"
     git -C "$copy" status --porcelain -uall > "$dir/$id.status" || errs="$errs status"
@@ -119,23 +133,49 @@ run_one() {
 }
 
 mkdir -p "$out/.pids"
-: > "$out/runs.log"
-{
-  echo "date=$(date -Is) supertest=$sha model=$model repeats=$repeats prompt=$prompt_name"
-  echo "claude=$(claude --version 2>/dev/null | head -1)"
-} > "$out/round.txt"
+rm -f "$out/.limit"
+if [[ -z "$resume" ]]; then
+  : > "$out/runs.log"
+  {
+    echo "date=$(date -Is) supertest=$sha model=$model repeats=$repeats prompt=$prompt_name"
+    echo "claude=$(claude --version 2>/dev/null | head -1)"
+    echo "cases=${cases[*]}"
+  } > "$out/round.txt"
+fi
+done_ok() {
+  grep -qE "^$1 $2 exit=0 seconds=[0-9]+ error=none$" "$out/runs.log"
+}
 jobs_list=()
 for case in "${cases[@]}"; do
   mkdir -p "$out/$case"
-  : > "$out/$case/arms.txt"
+  [[ -n "$resume" ]] || : > "$out/$case/arms.txt"
   for n in $(seq 1 "$repeats"); do
-    jobs_list+=("$case without-skill $n" "$case with-skill $n")
+    for arm in without-skill with-skill; do
+      done_ok "$case" "$arm.$n" && continue
+      rm -f "$out/$case/$arm.$n".*
+      jobs_list+=("$case $arm $n")
+    done
   done
 done
+if [[ -n "$resume" ]]; then
+  # Keep failed attempts for the record, then drop them from runs.log.
+  grep -vE 'exit=0 seconds=[0-9]+ error=none$' "$out/runs.log" >> "$out/retries.log" || true
+  grep -E 'exit=0 seconds=[0-9]+ error=none$' "$out/runs.log" > "$out/runs.log.tmp" || true
+  mv "$out/runs.log.tmp" "$out/runs.log"
+  echo "resuming: ${#jobs_list[@]} runs to go"
+fi
+if (( ${#jobs_list[@]} == 0 )); then
+  echo "nothing to run"
+  exit 0
+fi
 mapfile -t jobs_list < <(printf '%s\n' "${jobs_list[@]}" | shuf)
 
 running=0
 for job in "${jobs_list[@]}"; do
+  if [[ -e "$out/.limit" ]]; then
+    echo "usage limit reached: no further runs launched; rerun with RESUME=1 after it resets" >&2
+    break
+  fi
   read -r j_case j_arm j_n <<< "$job"
   run_one "$j_case" "$j_arm" "$j_n" &
   running=$((running + 1))
@@ -147,7 +187,7 @@ done
 wait || true
 
 echo "results: $out"
-failed="$(grep -vc 'exit=0 seconds=[0-9]* error=none$' "$out/runs.log" || true)"
-total="$(wc -l < "$out/runs.log")"
-echo "summary: $total runs, $failed failed"
-(( failed == 0 ))
+expected=$(( ${#cases[@]} * repeats * 2 ))
+ok="$(grep -cE 'exit=0 seconds=[0-9]+ error=none$' "$out/runs.log" || true)"
+echo "summary: $ok of $expected runs succeeded"
+(( ok == expected ))
