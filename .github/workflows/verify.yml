@@ -47,3 +47,15 @@ jobs:
         run: |
           diff <(find cases -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort) \
                <(sed -n 's/^ *- \([0-9][0-9]-[a-z0-9-]*\)$/\1/p' .github/workflows/verify.yml | sort)
+
+  skill-overfit:
+    name: skill does not absorb case-specific terms
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/checkout@v5
+        with:
+          repository: renanmpimentel/supertest
+          path: supertest
+          fetch-depth: 0
+      - run: SUPERTEST_REPO="$PWD/supertest" bash scripts/check-skill-overfit.sh

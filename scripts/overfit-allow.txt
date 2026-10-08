@@ -1,0 +1,25 @@
+# Terms that appear both in the cases and in the skill with a generic meaning.
+# One term per line after the comments; each needs a reason. Review this list
+# whenever check-skill-overfit.sh flags something new.
+# 30: default audit budget (number of regressions), not a case value
+# claims, committed, down, have, into, number, once, previous, small, smallest, which: plain English
+# permission: "permission rules often block rm -rf" (isolated copy guidance)
+# user: "unless the user sets another" (budget guidance)
+# validation: "validation and decision-guard contracts" (risk ordering)
+# vitest: a Necessist framework name in references/tools.md
+30
+claims
+committed
+down
+have
+into
+number
+once
+permission
+previous
+small
+smallest
+user
+validation
+vitest
+which

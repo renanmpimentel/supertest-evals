@@ -31,6 +31,14 @@ bash scripts/verify-all.sh     # proves the gap of every case
 
 The same checks run in GitHub Actions (`.github/workflows/verify.yml`), plus a check that `prepare-run.sh` never leaks the answer key.
 
+## Keeping the skill generic
+
+Results only count if the skill improves for unseen code, not for these cases.
+
+- **No case content in the skill:** `scripts/check-skill-overfit.sh` (also in CI) flags every distinctive term from the cases (identifiers, domain words, numbers) that entered the skill after `18a0c4a`, the version written before any case existed. Generic words are allowed only with a reason in `scripts/overfit-allow.txt`.
+- **Development and held-out cases:** a case used to design a skill change cannot validate it. Every change must improve held-out cases without hurting the others; once a held-out case is used to design a change, it becomes a development case. Current split: development 01–09 (08 and 09 informed the next change after the confirmatory round); held-out: none yet, so new cases are needed before the next validation.
+- **Pre-registration:** hypotheses go in `prereg/` and are committed before the round runs.
+
 ## Run the agent
 
 **Avoid answer-key leakage.** The agent must not read `cases/*/_eval` (not even by absolute path) nor recover it through cross-project memory tools (for example, an MCP memory server that indexed the sessions in which the answer keys were written). Run the agent with such memory tools disabled or out of scope, from a directory outside this repository.
