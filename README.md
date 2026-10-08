@@ -15,6 +15,8 @@ Skill version under evaluation: see `SUPERTEST_VERSION`.
 | [05 billing profile](cases/05-billing-profile) | TypeScript + vitest | absent fields keep their value | absent optional fields erased |
 | [06 payout fee](cases/06-payout-fee) | Go | control: tests already protect the contract | — (measures false positives) |
 | [07 cashback](cases/07-cashback) | Python + pytest | limits exactly at and far outside 25 / 3,000 | clamps shifted by one unit |
+| [08 role resolution](cases/08-role-resolution) | TypeScript + vitest | the claims win over a different body role | body role used when the claims have no role |
+| [09 ledger ordering](cases/09-ledger-ordering) | Python + pytest | entries sorted after `close_day()` | `add()` stops keeping the order |
 
 Control cases (marked "control") have no planted gap: their tests already protect the contract, and `verify.sh` proves that a regression is caught. They measure false positives, meaning an agent that claims a gap without proof.
 

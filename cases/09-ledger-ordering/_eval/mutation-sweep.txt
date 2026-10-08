@@ -1,0 +1,15 @@
+killed   app/ledger.py:27: <= -> <
+killed   app/ledger.py:27: <= -> >=
+killed   app/ledger.py:27: 0 -> 1
+killed   app/ledger.py:27: 0 -> -1
+killed   app/ledger.py:29: < -> <=
+killed   app/ledger.py:29: < -> >
+killed   app/ledger.py:29: 0 -> 1
+killed   app/ledger.py:29: 0 -> -1
+killed   app/ledger.py:37: 0 -> 1
+killed   app/ledger.py:37: 0 -> -1
+killed   app/ledger.py:39: == -> !=
+killed   app/ledger.py:44: == -> !=
+killed   app/ledger.py:45: == -> !=
+killed   app/ledger.py:50: - -> +
+summary: 14 mutants, 14 killed, 0 survived, 0 invalid

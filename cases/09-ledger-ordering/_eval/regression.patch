@@ -1,0 +1,11 @@
+--- a/app/ledger.py
++++ b/app/ledger.py
+@@ -29,7 +29,7 @@
+             raise LedgerError("amount must be positive")
+         if timestamp < 0:
+             raise LedgerError("timestamp must not be negative")
+-        bisect.insort(self._entries, Entry(timestamp, kind, amount_cents), key=lambda e: e.timestamp)
++        self._entries.append(Entry(timestamp, kind, amount_cents))
+ 
+     def entries(self):
+         return list(self._entries)

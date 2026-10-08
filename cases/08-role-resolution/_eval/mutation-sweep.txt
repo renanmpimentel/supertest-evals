@@ -1,0 +1,12 @@
+invalid  src/roles.ts:15: < -> <=
+invalid  src/roles.ts:15: < -> >
+invalid  src/roles.ts:15: > -> >=
+invalid  src/roles.ts:15: > -> <
+invalid  src/roles.ts:15: <Role -> <Role-1
+invalid  src/roles.ts:15: <Role -> <Role+1
+killed   src/roles.ts:28: == -> !=
+killed   src/roles.ts:28: == -> !=
+killed   src/roles.ts:28: == -> !=
+killed   src/roles.ts:28: || -> &&
+killed   src/roles.ts:28: || -> &&
+summary: 11 mutants, 5 killed, 0 survived, 6 invalid

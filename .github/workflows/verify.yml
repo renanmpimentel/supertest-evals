@@ -31,6 +31,8 @@ jobs:
           - 05-billing-profile
           - 06-payout-fee
           - 07-cashback
+          - 08-role-resolution
+          - 09-ledger-ordering
     steps:
       - uses: actions/checkout@v5
       - run: bash "cases/${{ matrix.case }}/_eval/verify.sh"

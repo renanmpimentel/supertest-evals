@@ -1,0 +1,11 @@
+--- a/src/roles.ts
++++ b/src/roles.ts
+@@ -28,7 +28,7 @@
+ }
+ 
+ export function resolveRole(claims: Claims, request: RoleRequest): Role {
+-  const received = claims.role;
++  const received = claims.role ?? request.role;
+   if (received === undefined || received === null || received.trim() === "") {
+     return "guest";
+   }
