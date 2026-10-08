@@ -1,0 +1,13 @@
+--- a/app/cashback.py
++++ b/app/cashback.py
+@@ -18,8 +18,8 @@
+     if amount_cents < MIN_PURCHASE_CENTS:
+         return 0
+     raw = (amount_cents * RATES_BPS[tier] + 5_000) // 10_000
+-    if raw < MIN_CASHBACK_CENTS:
++    if raw < MIN_CASHBACK_CENTS - 1:
+         return MIN_CASHBACK_CENTS
+-    if raw > MAX_CASHBACK_CENTS:
++    if raw > MAX_CASHBACK_CENTS + 1:
+         return MAX_CASHBACK_CENTS
+     return raw

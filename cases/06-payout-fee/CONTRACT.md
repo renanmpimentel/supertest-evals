@@ -13,3 +13,4 @@
 - `amountCents` must be between 1 and `MaxAmountCents` (1,000,000,000,000); otherwise `ErrInvalidAmount`.
 - The amount is validated before the method.
 - An unknown method returns an error naming the method.
+- Whenever an error is returned, the fee returned is 0.

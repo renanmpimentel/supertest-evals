@@ -1,0 +1,45 @@
+killed   payouts.go:12: 50 -> 51
+killed   payouts.go:12: 50 -> 49
+killed   payouts.go:13: 5_000 -> 5001
+killed   payouts.go:13: 5_000 -> 4999
+killed   payouts.go:14: 1_000_000_000_000 -> 1000000000001
+killed   payouts.go:14: 1_000_000_000_000 -> 999999999999
+killed   payouts.go:23: 50 -> 51
+killed   payouts.go:23: 50 -> 49
+killed   payouts.go:23: 0 -> 1
+killed   payouts.go:23: 0 -> -1
+killed   payouts.go:24: 100 -> 101
+killed   payouts.go:24: 100 -> 99
+killed   payouts.go:24: 150 -> 151
+killed   payouts.go:24: 150 -> 149
+killed   payouts.go:25: 250 -> 251
+killed   payouts.go:25: 250 -> 249
+killed   payouts.go:25: 30 -> 31
+killed   payouts.go:25: 30 -> 29
+killed   payouts.go:31: <= -> <
+killed   payouts.go:31: <= -> >=
+killed   payouts.go:31: > -> >=
+killed   payouts.go:31: > -> <
+killed   payouts.go:31: 0 -> 1
+killed   payouts.go:31: 0 -> -1
+killed   payouts.go:31: > MaxAmountCents -> > MaxAmountCents-1
+killed   payouts.go:31: > MaxAmountCents -> > MaxAmountCents+1
+killed   payouts.go:31: || -> &&
+killed   payouts.go:32: 0 -> 1
+killed   payouts.go:32: 0 -> -1
+killed   payouts.go:36: 0 -> 1
+killed   payouts.go:36: 0 -> -1
+survived payouts.go:38: 5_000 -> 5001
+killed   payouts.go:38: 5_000 -> 4999
+killed   payouts.go:38: 10_000 -> 10001
+killed   payouts.go:38: 10_000 -> 9999
+killed   payouts.go:38: + -> -
+survived payouts.go:39: < -> <=
+killed   payouts.go:39: < -> >
+killed   payouts.go:39: < MinFeeCents -> < MinFeeCents-1
+survived payouts.go:39: < MinFeeCents -> < MinFeeCents+1
+survived payouts.go:42: > -> >=
+killed   payouts.go:42: > -> <
+survived payouts.go:42: > MaxFeeCents -> > MaxFeeCents-1
+killed   payouts.go:42: > MaxFeeCents -> > MaxFeeCents+1
+summary: 44 mutants, 39 killed, 5 survived, 0 invalid

@@ -1,0 +1,37 @@
+killed   app/cashback.py:3: 100 -> 101
+killed   app/cashback.py:3: 100 -> 99
+killed   app/cashback.py:3: 200 -> 201
+killed   app/cashback.py:3: 200 -> 199
+killed   app/cashback.py:3: 300 -> 301
+killed   app/cashback.py:3: 300 -> 299
+killed   app/cashback.py:4: 500 -> 501
+killed   app/cashback.py:4: 500 -> 499
+killed   app/cashback.py:5: 25 -> 26
+killed   app/cashback.py:5: 25 -> 24
+killed   app/cashback.py:6: 3_000 -> 3001
+killed   app/cashback.py:6: 3_000 -> 2999
+killed   app/cashback.py:14: < -> <=
+killed   app/cashback.py:14: < -> >
+killed   app/cashback.py:14: 0 -> 1
+killed   app/cashback.py:14: 0 -> -1
+killed   app/cashback.py:18: < -> <=
+killed   app/cashback.py:18: < -> >
+killed   app/cashback.py:18: < MIN_PURCHASE_CENTS -> < MIN_PURCHASE_CENTS-1
+killed   app/cashback.py:18: < MIN_PURCHASE_CENTS -> < MIN_PURCHASE_CENTS+1
+killed   app/cashback.py:19: 0 -> 1
+killed   app/cashback.py:19: 0 -> -1
+survived app/cashback.py:20: 5_000 -> 5001
+killed   app/cashback.py:20: 5_000 -> 4999
+killed   app/cashback.py:20: 10_000 -> 10001
+killed   app/cashback.py:20: 10_000 -> 9999
+killed   app/cashback.py:20: * -> /
+killed   app/cashback.py:20: + -> -
+survived app/cashback.py:21: < -> <=
+killed   app/cashback.py:21: < -> >
+survived app/cashback.py:21: < MIN_CASHBACK_CENTS -> < MIN_CASHBACK_CENTS-1
+survived app/cashback.py:21: < MIN_CASHBACK_CENTS -> < MIN_CASHBACK_CENTS+1
+survived app/cashback.py:23: > -> >=
+killed   app/cashback.py:23: > -> <
+survived app/cashback.py:23: > MAX_CASHBACK_CENTS -> > MAX_CASHBACK_CENTS-1
+survived app/cashback.py:23: > MAX_CASHBACK_CENTS -> > MAX_CASHBACK_CENTS+1
+summary: 36 mutants, 29 killed, 7 survived, 0 invalid
