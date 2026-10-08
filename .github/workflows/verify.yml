@@ -33,6 +33,8 @@ jobs:
           - 07-cashback
           - 08-role-resolution
           - 09-ledger-ordering
+          - 10-acquirer-routing
+          - 11-payment-identifiers
     steps:
       - uses: actions/checkout@v5
       - run: bash "cases/${{ matrix.case }}/_eval/verify.sh"

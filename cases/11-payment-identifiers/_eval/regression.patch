@@ -1,0 +1,12 @@
+--- a/src/validators.ts
++++ b/src/validators.ts
+@@ -37,9 +37,6 @@
+   if (url.protocol !== "https:") {
+     throw new ValidationError("webhook url must use https");
+   }
+-  if (url.username !== "" || url.password !== "") {
+-    throw new ValidationError("webhook url must not contain credentials");
+-  }
+   const host = url.hostname.replace(/^\[|\]$/g, "");
+   if (host === "localhost" || isIP(host) !== 0) {
+     throw new ValidationError("webhook url must not target localhost or an IP address");

@@ -17,6 +17,8 @@ Skill version under evaluation: see `SUPERTEST_VERSION`.
 | [07 cashback](cases/07-cashback) | Python + pytest | limits exactly at and far outside 25 / 3,000 | clamps shifted by one unit |
 | [08 role resolution](cases/08-role-resolution) | TypeScript + vitest | the claims win over a different body role | body role used when the claims have no role |
 | [09 ledger ordering](cases/09-ledger-ordering) | Python + pytest | entries sorted after `close_day()` | `add()` stops keeping the order |
+| [10 acquirer routing](cases/10-acquirer-routing) | Go | held-out: see `_eval/expected.md` | held-out: see `_eval/expected.md` |
+| [11 payment identifiers](cases/11-payment-identifiers) | TypeScript + vitest | held-out: see `_eval/expected.md` | held-out: see `_eval/expected.md` |
 
 Control cases (marked "control") have no planted gap: their tests already protect the contract, and `verify.sh` proves that a regression is caught. They measure false positives, meaning an agent that claims a gap without proof.
 
@@ -36,7 +38,7 @@ The same checks run in GitHub Actions (`.github/workflows/verify.yml`), plus a c
 Results only count if the skill improves for unseen code, not for these cases.
 
 - **No case content in the skill:** `scripts/check-skill-overfit.sh` (also in CI) flags every distinctive term from the cases (identifiers, domain words, numbers) that entered the skill after `18a0c4a`, the version written before any case existed. Generic words are allowed only with a reason in `scripts/overfit-allow.txt`.
-- **Development and held-out cases:** a case used to design a skill change cannot validate it. Every change must improve held-out cases without hurting the others; once a held-out case is used to design a change, it becomes a development case. Current split: development 01–09 (08 and 09 informed the next change after the confirmatory round); held-out: none yet, so new cases are needed before the next validation.
+- **Development and held-out cases:** a case used to design a skill change cannot validate it. Every change must improve held-out cases without hurting the others; once a held-out case is used to design a change, it becomes a development case. Current split: development 01–09 (08 and 09 informed the next change after the confirmatory round); held-out: 10 and 11.
 - **Pre-registration:** hypotheses go in `prereg/` and are committed before the round runs.
 
 ## Run the agent

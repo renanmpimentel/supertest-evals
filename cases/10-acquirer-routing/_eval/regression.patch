@@ -1,0 +1,11 @@
+--- a/routing.go
++++ b/routing.go
+@@ -14,7 +14,7 @@
+ )
+ 
+ const (
+-	binLong          = 8
++	binLong          = 7
+ 	binShort         = 6
+ 	minLength        = 12
+ 	maxLength        = 19
