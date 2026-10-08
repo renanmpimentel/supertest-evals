@@ -1,0 +1,17 @@
+diff --git a/payouts_test.go b/payouts_test.go
+index 6f25ecd..1c824eb 100644
+--- a/payouts_test.go
++++ b/payouts_test.go
+@@ -44,6 +44,12 @@ func TestFeeRejectsInvalidInput(t *testing.T) {
+ 			t.Errorf("Fee(%d, pix) error = %v, want ErrInvalidAmount", amount, err)
+ 		}
+ 	}
++	if _, err := Fee(1_000_000_000_001, "crypto"); !errors.Is(err, ErrInvalidAmount) {
++		t.Errorf("Fee(max+1, crypto) error = %v, want ErrInvalidAmount", err)
++	}
++	if _, err := Fee(-1, "crypto"); !errors.Is(err, ErrInvalidAmount) {
++		t.Errorf("Fee(-1, crypto) error = %v, want ErrInvalidAmount", err)
++	}
+ 	if _, err := Fee(0, "crypto"); !errors.Is(err, ErrInvalidAmount) {
+ 		t.Errorf("Fee(0, crypto) error = %v, want ErrInvalidAmount", err)
+ 	}

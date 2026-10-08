@@ -1,0 +1,3 @@
+date=2026-10-07T15:43:05-03:00 supertest=18a0c4a model=sonnet repeats=5 prompt=ship
+claude=2.1.285 (Claude Code)
+cases=01-idempotent-charge 02-circuit-breaker 03-payment-persistence 04-refund-validation 05-billing-profile 06-payout-fee

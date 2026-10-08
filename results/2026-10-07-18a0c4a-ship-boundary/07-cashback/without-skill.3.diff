@@ -1,0 +1,38 @@
+diff --git a/tests/test_cashback.py b/tests/test_cashback.py
+index 0ca7b1f..f3c2917 100644
+--- a/tests/test_cashback.py
++++ b/tests/test_cashback.py
+@@ -57,3 +57,33 @@ def test_rejects_negative_amount():
+ def test_rejects_unknown_tier(amount):
+     with pytest.raises(CashbackError, match="unknown tier 'gold'"):
+         cashback_cents(amount, "gold")
++
++
++@pytest.mark.parametrize("amount", [0, 499, 500])
++def test_rejects_unknown_tier_even_for_ineligible_amounts(amount):
++    with pytest.raises(CashbackError, match="unknown tier 'gold'"):
++        cashback_cents(amount, "gold")
++
++
++@pytest.mark.parametrize("tier", ["basic", "plus", "premium", "gold"])
++def test_rejects_negative_amount_for_any_tier(tier):
++    with pytest.raises(CashbackError):
++        cashback_cents(-1, tier)
++
++
++def test_rounds_half_up_for_other_tiers():
++    assert cashback_cents(5_025, "plus") == 101
++    assert cashback_cents(5_024, "plus") == 100
++    assert cashback_cents(3_350, "premium") == 101  # 100.5
++
++
++def test_cap_applies_to_every_tier():
++    assert cashback_cents(300_000, "basic") == 3_000
++    assert cashback_cents(300_001, "basic") == 3_000
++    assert cashback_cents(150_000, "plus") == 3_000
++    assert cashback_cents(99_984, "premium") == 3_000
++
++
++def test_unknown_tier_is_case_sensitive():
++    with pytest.raises(CashbackError, match="unknown tier 'Basic'"):
++        cashback_cents(1_000, "Basic")

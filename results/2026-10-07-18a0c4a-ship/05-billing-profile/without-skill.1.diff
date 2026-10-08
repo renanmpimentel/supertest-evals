@@ -1,0 +1,55 @@
+diff --git a/tests/profile.test.ts b/tests/profile.test.ts
+index 4ba06cb..8e6ba79 100644
+--- a/tests/profile.test.ts
++++ b/tests/profile.test.ts
+@@ -120,4 +120,50 @@ describe("applyProfilePatch", () => {
+     applyProfilePatch(stored, { email: "finance@acme.test", taxId: "1" });
+     expect(stored).toEqual(copy);
+   });
++
++  it("keeps every stored value, including optional text, when the patch is empty", () => {
++    const full = { email: "a@b.test", country: "DE", companyName: "Acme", taxId: "99" };
++    expect(applyProfilePatch(full, {})).toEqual(full);
++  });
++
++  it("keeps stored optional text when only other fields are patched", () => {
++    const full = { email: "a@b.test", country: "DE", companyName: "Acme", taxId: "99" };
++    expect(applyProfilePatch(full, { email: "c@d.test", country: "us" })).toEqual({
++      ...full,
++      email: "c@d.test",
++      country: "US",
++    });
++  });
++
++  it("treats explicit undefined as absent for every field", () => {
++    const full = { email: "a@b.test", country: "DE", companyName: "Acme", taxId: "99" };
++    expect(
++      applyProfilePatch(full, { email: undefined, country: undefined, companyName: undefined, taxId: undefined }),
++    ).toEqual(full);
++  });
++
++  it("returns a new object", () => {
++    expect(applyProfilePatch(stored, {})).not.toBe(stored);
++  });
++
++  it("accepts all supported countries", () => {
++    for (const c of ["BR", "US", "PT", "DE"]) {
++      expect(applyProfilePatch(stored, { country: c.toLowerCase() }).country).toBe(c);
++    }
++  });
++
++  it("rejects blank email and country with the right field", () => {
++    expect(thrown(() => applyProfilePatch(stored, { email: "  " }))).toMatchObject({ field: "email" });
++    expect(thrown(() => applyProfilePatch(stored, { country: "" }))).toMatchObject({ field: "country" });
++  });
++
++  it("does not partially apply: invalid field fails the whole patch", () => {
++    expect(() => applyProfilePatch(stored, { companyName: "X", country: "XX" })).toThrow(ProfileError);
++  });
++
++  it("rejects emails with whitespace inside or missing parts", () => {
++    for (const e of ["a b@c.test", "@c.test", "a@.test", "a@c."]) {
++      expect(() => normalizeEmail(e)).toThrow(ProfileError);
++    }
++  });
+ });

@@ -53,7 +53,7 @@ def test_rejects_negative_amount():
         cashback_cents(-1, "basic")
 
 
-@pytest.mark.parametrize("amount", [100, 10_000])
+@pytest.mark.parametrize("amount", [0, 100, 10_000])
 def test_rejects_unknown_tier(amount):
     with pytest.raises(CashbackError, match="unknown tier 'gold'"):
         cashback_cents(amount, "gold")

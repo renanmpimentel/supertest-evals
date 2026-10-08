@@ -18,6 +18,8 @@ func TestFee(t *testing.T) {
 		{"card percentage plus fixed", "card", 100_000, 2_530},
 		{"rounds half up", "bank_transfer", 150, 152},
 		{"rounds down below half", "bank_transfer", 149, 151},
+		{"card rounds half up", "card", 1_020, 56},
+		{"card rounds down below half", "card", 1_019, 55},
 		{"rounds half up above minimum", "pix", 10_100, 51},
 		{"smallest amount", "pix", 1, 50},
 		{"minimum fee", "pix", 1_000, 50},

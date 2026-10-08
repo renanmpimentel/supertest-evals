@@ -1,0 +1,53 @@
+diff --git a/tests/test_charge.py b/tests/test_charge.py
+index c194a06..d63b008 100644
+--- a/tests/test_charge.py
++++ b/tests/test_charge.py
+@@ -18,3 +18,48 @@ def test_same_key_returns_same_charge():
+     second = service.charge("key-1", 5000)
+     assert second["status"] == "succeeded"
+     assert second["id"] == first["id"]
++
++
++class CountingGateway:
++    """Returns a unique id per call and records every call."""
++
++    def __init__(self):
++        self.calls = []
++
++    def charge(self, amount_cents):
++        self.calls.append(amount_cents)
++        return f"ch_{len(self.calls)}"
++
++
++def test_same_key_charges_gateway_only_once():
++    gateway = CountingGateway()
++    service = ChargeService(gateway)
++    service.charge("key-1", 5000)
++    service.charge("key-1", 5000)
++    service.charge("key-1", 5000)
++    assert gateway.calls == [5000]
++
++
++def test_same_key_returns_identical_charge():
++    service = ChargeService(CountingGateway())
++    first = service.charge("key-1", 5000)
++    second = service.charge("key-1", 5000)
++    assert second == first
++
++
++def test_different_keys_create_different_charges():
++    gateway = CountingGateway()
++    service = ChargeService(gateway)
++    a = service.charge("key-a", 5000)
++    b = service.charge("key-b", 5000)
++    assert len(gateway.calls) == 2
++    assert a["id"] != b["id"]
++
++
++def test_replay_of_first_key_after_other_key_does_not_recharge():
++    gateway = CountingGateway()
++    service = ChargeService(gateway)
++    a = service.charge("key-a", 100)
++    service.charge("key-b", 200)
++    assert service.charge("key-a", 100) == a
++    assert gateway.calls == [100, 200]

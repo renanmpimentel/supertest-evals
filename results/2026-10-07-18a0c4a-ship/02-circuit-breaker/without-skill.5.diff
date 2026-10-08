@@ -1,0 +1,74 @@
+diff --git a/tests/breaker.test.ts b/tests/breaker.test.ts
+index 9d2c6b9..74cc0b2 100644
+--- a/tests/breaker.test.ts
++++ b/tests/breaker.test.ts
+@@ -22,4 +22,69 @@ describe("GatewayBreaker", () => {
+     const result = await breaker.charge(1000);
+     expect(result).toEqual({ ok: false, message: FALLBACK_MESSAGE });
+   });
++
++  function scripted(outcomes: Array<string | Error>) {
++    let calls = 0;
++    return {
++      get calls() {
++        return calls;
++      },
++      async charge(): Promise<string> {
++        const o = outcomes[calls++];
++        if (o instanceof Error) throw o;
++        return o;
++      },
++    };
++  }
++
++  it("returns the gateway's error message while the circuit is closed", async () => {
++    const gw = scripted([new Error("card declined")]);
++    const breaker = new GatewayBreaker(gw, 3);
++    expect(await breaker.charge(1)).toEqual({ ok: false, message: "card declined" });
++    expect(breaker.isOpen()).toBe(false);
++  });
++
++  it("stays closed below the threshold and keeps calling the gateway", async () => {
++    const gw = scripted([new Error("a"), new Error("b"), "ch_ok"]);
++    const breaker = new GatewayBreaker(gw, 3);
++    await breaker.charge(1);
++    await breaker.charge(1);
++    expect(breaker.isOpen()).toBe(false);
++    expect(await breaker.charge(1)).toEqual({ ok: true, chargeId: "ch_ok" });
++    expect(gw.calls).toBe(3);
++  });
++
++  it("opens exactly at the threshold and does not call the gateway afterwards", async () => {
++    const gw = scripted([new Error("a"), new Error("b"), "ch_never"]);
++    const breaker = new GatewayBreaker(gw, 2);
++    expect(await breaker.charge(1)).toEqual({ ok: false, message: "a" });
++    expect(await breaker.charge(1)).toEqual({ ok: false, message: "b" });
++    expect(breaker.isOpen()).toBe(true);
++    expect(await breaker.charge(1)).toEqual({ ok: false, message: FALLBACK_MESSAGE });
++    expect(await breaker.charge(1)).toEqual({ ok: false, message: FALLBACK_MESSAGE });
++    expect(gw.calls).toBe(2);
++  });
++
++  it("resets the failure count on success so only consecutive failures open it", async () => {
++    const e = () => new Error("x");
++    const gw = scripted([e(), e(), "ch_1", e(), e(), "ch_2"]);
++    const breaker = new GatewayBreaker(gw, 3);
++    for (let i = 0; i < 5; i += 1) await breaker.charge(1);
++    expect(breaker.isOpen()).toBe(false);
++    expect(await breaker.charge(1)).toEqual({ ok: true, chargeId: "ch_2" });
++    expect(gw.calls).toBe(6);
++  });
++
++  it("honours a custom threshold and defaults to 3", async () => {
++    const one = new GatewayBreaker(scripted([new Error("a")]), 1);
++    await one.charge(1);
++    expect(one.isOpen()).toBe(true);
++
++    const def = new GatewayBreaker(unavailable);
++    await def.charge(1);
++    await def.charge(1);
++    expect(def.isOpen()).toBe(false);
++    await def.charge(1);
++    expect(def.isOpen()).toBe(true);
++  });
+ });

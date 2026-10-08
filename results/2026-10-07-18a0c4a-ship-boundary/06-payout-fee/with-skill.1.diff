@@ -1,0 +1,19 @@
+diff --git a/payouts_test.go b/payouts_test.go
+index dbbf249..ac6ea81 100644
+--- a/payouts_test.go
++++ b/payouts_test.go
+@@ -19,6 +19,14 @@ func TestFee(t *testing.T) {
+ 		{"rounds half up", "bank_transfer", 150, 152},
+ 		{"rounds down below half", "bank_transfer", 149, 151},
+ 		{"rounds half up above minimum", "pix", 10_100, 51},
++		{"card rounds half up", "card", 1_020, 56},
++		{"card rounds down below half", "card", 1_019, 55},
++		{"bank transfer at cap", "bank_transfer", 485_000, 5_000},
++		{"bank transfer just below cap", "bank_transfer", 484_900, 4_999},
++		{"bank transfer above cap", "bank_transfer", 2_000_000, 5_000},
++		{"pix at cap", "pix", 1_000_000, 5_000},
++		{"pix just below cap", "pix", 999_800, 4_999},
++		{"bank transfer fixed fee floors above minimum", "bank_transfer", 1, 150},
+ 		{"smallest amount", "pix", 1, 50},
+ 		{"minimum fee", "pix", 1_000, 50},
+ 		{"card just below minimum", "card", 760, 50},

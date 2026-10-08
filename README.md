@@ -48,10 +48,17 @@ The same checks run in GitHub Actions (`.github/workflows/verify.yml`), plus a c
 
 ## Results
 
-| Date | Skill | Agent | Case | Without skill | With skill |
-| --- | --- | --- | --- | --- | --- |
-| 2026-10-07 | `18a0c4a` | Claude Code, sonnet | 01 idempotent charge | pass | pass |
-| 2026-10-07 | `18a0c4a` | Claude Code, sonnet | 02 circuit breaker | pass | pass |
-| 2026-10-07 | `18a0c4a` | Claude Code, sonnet | 03 payment persistence | pass | pass (no final report) |
+Model: Claude Code with `sonnet`, Supertest `18a0c4a`, 5 runs per case and arm, in the clean environment described above. Every with-skill `VERDICT: inadequate` was backed by a gap the agent proved by execution and the grader reproduced; neither arm produced a false positive.
 
-First round: the planted gaps did not separate the arms — the model found and proved them without the skill. With the skill, every run mutated an isolated copy instead of the project's production files. Details: [results/2026-10-07-18a0c4a/grades.md](results/2026-10-07-18a0c4a/grades.md).
+| Observation | Without skill | With skill |
+| --- | --- | --- |
+| Classic planted gaps (01–05): correct verdict and a fix that catches the regression | 25/25 | 25/25 |
+| Subtle gaps (one-unit boundaries, rounding, validation order): found and proved a real gap | 1/15 | 7/15 |
+| Planted boundary regression (07) caught by the agent's own fix | 0/5 | 1/5 |
+| Mean cost / time per run | $0.07 / 30 s | $0.13 / 120 s |
+
+- **Classic gaps:** no difference. The model finds and fixes them without the skill.
+- **Subtle gaps:** without the skill the agent mostly reads the suite and calls it adequate; with the skill it runs mutations against the original tests and proves gaps. Fisher exact p = 0.035, but the pooling is post hoc and favours the skill (two of the three observations come from case 06, whose gaps with-skill runs discovered). The comparison designed in advance, case 07, is 3/5 vs 1/5 and not significant on its own.
+- **Limitation of the skill:** it found a real gap more often, but rarely the specific boundary regression, because its mutations are hand-picked rather than systematic.
+
+Details: [`2026-10-07-18a0c4a-ship`](results/2026-10-07-18a0c4a-ship/analysis.md) (cases 01–06) and [`2026-10-07-18a0c4a-ship-boundary`](results/2026-10-07-18a0c4a-ship-boundary/analysis.md) (cases 06–07). The earlier [`2026-10-07-18a0c4a`](results/2026-10-07-18a0c4a/grades.md) round used the `audit` prompt in the user's own environment, without repetitions or objective scoring.

@@ -1,0 +1,28 @@
+diff --git a/tests/test_refunds.py b/tests/test_refunds.py
+index 5a7084e..967297a 100644
+--- a/tests/test_refunds.py
++++ b/tests/test_refunds.py
+@@ -48,9 +48,20 @@ def test_rejects_amount_above_refundable():
+ 
+ 
+ def test_rejects_refund_after_window():
+-    payment = Payment("pay_3", "authorized", 10_000, 0, CAPTURED_AT)
+-    with pytest.raises(RefundError):
+-        validate_refund(payment, 1_000, CAPTURED_AT + timedelta(days=31))
++    with pytest.raises(RefundError) as error:
++        validate_refund(captured(), 1_000, CAPTURED_AT + timedelta(days=31))
++    assert error.value.code == "window_expired"
++
++
++def test_accepts_refund_exactly_at_deadline():
++    assert validate_refund(captured(), 1_000, CAPTURED_AT + timedelta(days=30)) == 1_000
++
++
++def test_rejects_refund_one_second_after_deadline():
++    now = CAPTURED_AT + timedelta(days=30, seconds=1)
++    with pytest.raises(RefundError) as error:
++        validate_refund(captured(), 1_000, now)
++    assert error.value.code == "window_expired"
+ 
+ 
+ @pytest.mark.parametrize("status", ["refunded", "voided"])

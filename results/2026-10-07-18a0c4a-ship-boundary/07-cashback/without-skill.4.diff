@@ -1,0 +1,34 @@
+diff --git a/tests/test_cashback.py b/tests/test_cashback.py
+index 0ca7b1f..bc3f7b8 100644
+--- a/tests/test_cashback.py
++++ b/tests/test_cashback.py
+@@ -57,3 +57,29 @@ def test_rejects_negative_amount():
+ def test_rejects_unknown_tier(amount):
+     with pytest.raises(CashbackError, match="unknown tier 'gold'"):
+         cashback_cents(amount, "gold")
++
++
++@pytest.mark.parametrize("amount", [-1, -499, -500, -1_000_000])
++@pytest.mark.parametrize("tier", ["basic", "plus", "premium"])
++def test_rejects_negative_amount_any_size(amount, tier):
++    with pytest.raises(CashbackError):
++        cashback_cents(amount, tier)
++
++
++def test_negative_amount_with_unknown_tier_raises():
++    with pytest.raises(CashbackError):
++        cashback_cents(-100, "gold")
++
++
++@pytest.mark.parametrize(
++    ("amount", "tier", "expected"),
++    [(2_525, "plus", 51), (2_524, "plus", 50), (1_684, "premium", 51), (1_683, "premium", 50)],
++)
++def test_rounding_half_up_other_tiers(amount, tier, expected):
++    assert cashback_cents(amount, tier) == expected
++
++
++@pytest.mark.parametrize("tier", ["basic", "plus", "premium"])
++def test_minimum_applies_at_threshold_for_every_tier(tier):
++    assert cashback_cents(499, tier) == 0
++    assert cashback_cents(500, tier) == 25

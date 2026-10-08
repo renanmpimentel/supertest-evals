@@ -1,0 +1,41 @@
+diff --git a/tests/profile.test.ts b/tests/profile.test.ts
+index 4ba06cb..ffe3cdf 100644
+--- a/tests/profile.test.ts
++++ b/tests/profile.test.ts
+@@ -120,4 +120,36 @@ describe("applyProfilePatch", () => {
+     applyProfilePatch(stored, { email: "finance@acme.test", taxId: "1" });
+     expect(stored).toEqual(copy);
+   });
++  it("keeps stored non-null optional fields and email/country when absent", () => {
++    const full = { email: "a@b.test", country: "DE", companyName: "Acme", taxId: "99" };
++    expect(applyProfilePatch(full, {})).toEqual(full);
++    expect(applyProfilePatch(full, { email: "c@d.test" })).toEqual({ ...full, email: "c@d.test" });
++  });
++
++  it("treats explicit undefined like an absent field", () => {
++    const full = { email: "a@b.test", country: "DE", companyName: "Acme", taxId: "99" };
++    expect(
++      applyProfilePatch(full, { email: undefined, country: undefined, companyName: undefined, taxId: undefined }),
++    ).toEqual(full);
++  });
++
++  it("accepts every supported country", () => {
++    for (const c of ["BR", "US", "PT", "DE"]) {
++      expect(applyProfilePatch(stored, { country: c.toLowerCase() }).country).toBe(c);
++    }
++  });
++
++  it("reports the field for invalid optional-independent errors even when other fields are valid", () => {
++    const err = thrown(() => applyProfilePatch(stored, { country: "us", email: "bad" }));
++    expect(err).toMatchObject({ field: "email" });
++  });
++
++  it("rejects blank email and blank country", () => {
++    expect(() => applyProfilePatch(stored, { email: "  " })).toThrow(ProfileError);
++    expect(() => applyProfilePatch(stored, { country: "" })).toThrow(ProfileError);
++  });
++
++  it("returns a new object", () => {
++    expect(applyProfilePatch(stored, {})).not.toBe(stored);
++  });
+ });

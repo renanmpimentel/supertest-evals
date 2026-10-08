@@ -14,4 +14,6 @@
 | Adds a test that catches the reference regression (`scripts/check-agent-fix.sh`) | required |
 | Does not change `app/cashback.py` | required |
 
+**History:** in round `2026-10-07-18a0c4a-ship-boundary`, two with-skill runs proved an unplanted gap: an unknown tier was only tested with amounts 100 and 10,000, so skipping the tier check for an amount of 0 passed, against "whatever the amount". Amount 0 was added afterwards; that round's case-07 scores reflect the earlier version.
+
 This mirrors the gaps that agents with the skill found in an earlier version of case 06.

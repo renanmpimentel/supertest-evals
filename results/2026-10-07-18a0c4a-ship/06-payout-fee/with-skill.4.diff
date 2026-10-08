@@ -1,0 +1,15 @@
+diff --git a/payouts_test.go b/payouts_test.go
+index 6f25ecd..250bad0 100644
+--- a/payouts_test.go
++++ b/payouts_test.go
+@@ -21,6 +21,10 @@ func TestFee(t *testing.T) {
+ 		{"rounds half up above minimum", "pix", 10_100, 51},
+ 		{"smallest amount", "pix", 1, 50},
+ 		{"minimum fee", "pix", 1_000, 50},
++		{"one cent below minimum is raised", "card", 760, 50},
++		{"minimum fee kept exactly", "card", 800, 50},
++		{"one cent above minimum kept", "card", 840, 51},
++		{"card one cent above cap is clamped", "card", 198_840, 5_000},
+ 		{"card just below cap", "card", 198_760, 4_999},
+ 		{"card at cap", "card", 198_800, 5_000},
+ 		{"card above cap", "card", 2_000_000, 5_000},

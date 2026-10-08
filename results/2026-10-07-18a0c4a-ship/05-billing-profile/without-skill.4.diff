@@ -1,0 +1,40 @@
+diff --git a/tests/profile.test.ts b/tests/profile.test.ts
+index 4ba06cb..d62a546 100644
+--- a/tests/profile.test.ts
++++ b/tests/profile.test.ts
+@@ -115,6 +115,35 @@ describe("applyProfilePatch", () => {
+     });
+   });
+ 
++  it("keeps stored non-null optional fields when absent from the patch", () => {
++    const full = { ...stored, companyName: "Acme Ltda", taxId: "12.345" };
++    expect(applyProfilePatch(full, { email: "finance@acme.test" })).toEqual({
++      ...full,
++      email: "finance@acme.test",
++    });
++    expect(applyProfilePatch(full, {})).toEqual(full);
++  });
++
++  it("treats explicit undefined as absent", () => {
++    const full = { ...stored, companyName: "Acme Ltda", taxId: "12.345" };
++    expect(
++      applyProfilePatch(full, {
++        email: undefined,
++        country: undefined,
++        companyName: undefined,
++        taxId: undefined,
++      }),
++    ).toEqual(full);
++  });
++
++  it("returns a new object and leaves stored untouched when a field is cleared", () => {
++    const full = { ...stored, companyName: "Acme Ltda", taxId: "12.345" };
++    const copy = { ...full };
++    const result = applyProfilePatch(full, { companyName: null });
++    expect(result).not.toBe(full);
++    expect(full).toEqual(copy);
++  });
++
+   it("does not modify the stored profile", () => {
+     const copy = { ...stored };
+     applyProfilePatch(stored, { email: "finance@acme.test", taxId: "1" });

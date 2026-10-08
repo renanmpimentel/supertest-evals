@@ -1,0 +1,132 @@
+diff --git a/payments_test.go b/payments_test.go
+index 691f584..0411aa1 100644
+--- a/payments_test.go
++++ b/payments_test.go
+@@ -50,3 +50,127 @@ func TestCreatePaymentRejectsInvalidAmount(t *testing.T) {
+ 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadRequest)
+ 	}
+ }
++
++func countPayments(t *testing.T, path string) int {
++	t.Helper()
++	// Fresh connection: only committed data is visible.
++	db, err := OpenDB(path)
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer db.Close()
++	var n int
++	if err := db.QueryRow(`SELECT COUNT(*) FROM payments`).Scan(&n); err != nil {
++		t.Fatal(err)
++	}
++	return n
++}
++
++func TestCreatePaymentIsPersistedAndCommitted(t *testing.T) {
++	path := filepath.Join(t.TempDir(), "payments.db")
++	db, err := OpenDB(path)
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer db.Close()
++
++	rec := httptest.NewRecorder()
++	req := httptest.NewRequest(http.MethodPost, "/payments", strings.NewReader(`{"amount_cents": 1234}`))
++	(&Handler{DB: db}).ServeHTTP(rec, req)
++	if rec.Code != http.StatusCreated {
++		t.Fatalf("status = %d, want 201", rec.Code)
++	}
++	var body createResponse
++	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
++		t.Fatal(err)
++	}
++
++	other, err := OpenDB(path)
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer other.Close()
++	var amount int64
++	if err := other.QueryRow(`SELECT amount_cents FROM payments WHERE id = ?`, body.ID).Scan(&amount); err != nil {
++		t.Fatalf("payment %q not found via separate connection: %v", body.ID, err)
++	}
++	if amount != 1234 {
++		t.Errorf("stored amount = %d, want 1234", amount)
++	}
++}
++
++func TestCreatePaymentIDsAreUnique(t *testing.T) {
++	path := filepath.Join(t.TempDir(), "payments.db")
++	db, err := OpenDB(path)
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer db.Close()
++	h := &Handler{DB: db}
++	seen := map[string]bool{}
++	for i := 0; i < 20; i++ {
++		rec := httptest.NewRecorder()
++		h.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/payments", strings.NewReader(`{"amount_cents": 1}`)))
++		var body createResponse
++		if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
++			t.Fatal(err)
++		}
++		if seen[body.ID] {
++			t.Fatalf("duplicate id %q", body.ID)
++		}
++		seen[body.ID] = true
++	}
++	if n := countPayments(t, path); n != 20 {
++		t.Errorf("rows = %d, want 20", n)
++	}
++}
++
++func TestInvalidRequestsReturn400AndSaveNothing(t *testing.T) {
++	cases := map[string]string{
++		"zero":       `{"amount_cents": 0}`,
++		"negative":   `{"amount_cents": -5}`,
++		"missing":    `{}`,
++		"malformed":  `{"amount_cents": `,
++		"not json":   `hello`,
++		"empty":      ``,
++		"string":     `{"amount_cents": "100"}`,
++		"fractional": `{"amount_cents": 1.5}`,
++		"null":       `{"amount_cents": null}`,
++		"wrong type": `[1,2]`,
++	}
++	for name, body := range cases {
++		t.Run(name, func(t *testing.T) {
++			path := filepath.Join(t.TempDir(), "payments.db")
++			db, err := OpenDB(path)
++			if err != nil {
++				t.Fatal(err)
++			}
++			defer db.Close()
++			rec := httptest.NewRecorder()
++			(&Handler{DB: db}).ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/payments", strings.NewReader(body)))
++			if rec.Code != http.StatusBadRequest {
++				t.Fatalf("status = %d, want 400", rec.Code)
++			}
++			if n := countPayments(t, path); n != 0 {
++				t.Errorf("rows = %d, want 0", n)
++			}
++		})
++	}
++}
++
++func TestSmallestValidAmountAccepted(t *testing.T) {
++	path := filepath.Join(t.TempDir(), "payments.db")
++	db, err := OpenDB(path)
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer db.Close()
++	rec := httptest.NewRecorder()
++	(&Handler{DB: db}).ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/payments", strings.NewReader(`{"amount_cents": 1}`)))
++	if rec.Code != http.StatusCreated {
++		t.Fatalf("status = %d, want 201", rec.Code)
++	}
++	if n := countPayments(t, path); n != 1 {
++		t.Errorf("rows = %d, want 1", n)
++	}
++}

@@ -1,0 +1,76 @@
+diff --git a/tests/profile.test.ts b/tests/profile.test.ts
+index 4ba06cb..a71d96f 100644
+--- a/tests/profile.test.ts
++++ b/tests/profile.test.ts
+@@ -33,6 +33,14 @@ describe("normalizeEmail", () => {
+     expect(() => normalizeEmail("not an email")).toThrow(/invalid email/);
+   });
+ 
++  it.each(["", "a@b", "@b.co", "a@.co", "a b@c.de", "a@b c.de", "a@@b.co"])("rejects %j", (v) => {
++    expect(() => normalizeEmail(v)).toThrow(ProfileError);
++  });
++
++  it("accepts a minimal address", () => {
++    expect(normalizeEmail("a@b.co")).toBe("a@b.co");
++  });
++
+   it("reports the email field on rejection", () => {
+     const err = thrown(() => normalizeEmail("billing@acme"));
+     expect(err).toBeInstanceOf(ProfileError);
+@@ -41,6 +49,14 @@ describe("normalizeEmail", () => {
+ });
+ 
+ describe("validateCountry", () => {
++  it.each(["BR", "US", "PT", "DE"])("accepts %s", (code) => {
++    expect(validateCountry(code)).toBe(code);
++  });
++
++  it.each(["", "BRA", "B R", "FR"])("rejects %j", (code) => {
++    expect(() => validateCountry(code)).toThrow(ProfileError);
++  });
++
+   it("accepts supported codes in any case", () => {
+     expect(validateCountry(" pt ")).toBe("PT");
+   });
+@@ -120,4 +136,41 @@ describe("applyProfilePatch", () => {
+     applyProfilePatch(stored, { email: "finance@acme.test", taxId: "1" });
+     expect(stored).toEqual(copy);
+   });
++
++  const full: BillingProfile = {
++    email: "billing@acme.test",
++    country: "DE",
++    companyName: "Acme Ltda",
++    taxId: "12.345",
++  };
++
++  it("keeps every stored value when the patch is empty", () => {
++    expect(applyProfilePatch(full, {})).toEqual(full);
++  });
++
++  it("keeps stored values for fields the patch leaves undefined", () => {
++    expect(
++      applyProfilePatch(full, {
++        email: undefined,
++        country: undefined,
++        companyName: undefined,
++        taxId: undefined,
++      }),
++    ).toEqual(full);
++  });
++
++  it("keeps stored optional values when only other fields are patched", () => {
++    expect(applyProfilePatch(full, { country: "us" })).toEqual({ ...full, country: "US" });
++    expect(applyProfilePatch(full, { companyName: "New" })).toEqual({ ...full, companyName: "New" });
++    expect(applyProfilePatch(full, { taxId: "9" })).toEqual({ ...full, taxId: "9" });
++  });
++
++  it("returns a new object", () => {
++    expect(applyProfilePatch(full, {})).not.toBe(full);
++  });
++
++  it("does not validate stored values that the patch does not touch", () => {
++    const legacy = { ...full, country: "XX", email: "legacy" };
++    expect(applyProfilePatch(legacy, { taxId: "1" })).toEqual({ ...legacy, taxId: "1" });
++  });
+ });

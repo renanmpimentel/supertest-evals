@@ -1,0 +1,49 @@
+diff --git a/tests/profile.test.ts b/tests/profile.test.ts
+index 4ba06cb..b593849 100644
+--- a/tests/profile.test.ts
++++ b/tests/profile.test.ts
+@@ -120,4 +120,44 @@ describe("applyProfilePatch", () => {
+     applyProfilePatch(stored, { email: "finance@acme.test", taxId: "1" });
+     expect(stored).toEqual(copy);
+   });
++
++  it("keeps non-null optional values and country when absent or undefined", () => {
++    const full = { email: "a@b.co", country: "DE", companyName: "Acme", taxId: "99" };
++    expect(applyProfilePatch(full, {})).toEqual(full);
++    expect(
++      applyProfilePatch(full, { email: undefined, country: undefined, companyName: undefined, taxId: undefined }),
++    ).toEqual(full);
++    expect(applyProfilePatch(full, { email: "x@y.zz" })).toEqual({ ...full, email: "x@y.zz" });
++  });
++
++  it("changes only the patched optional field", () => {
++    const full = { ...stored, companyName: "Acme", taxId: "99" };
++    expect(applyProfilePatch(full, { taxId: "7" })).toEqual({ ...full, taxId: "7" });
++    expect(applyProfilePatch(full, { companyName: "Beta" })).toEqual({ ...full, companyName: "Beta" });
++  });
++
++  it("returns a new object", () => {
++    expect(applyProfilePatch(stored, {})).not.toBe(stored);
++  });
++});
++
++describe("input boundaries", () => {
++  it.each(["BR", "US", "PT", "DE"])("accepts %s", (c) => {
++    expect(validateCountry(c)).toBe(c);
++  });
++
++  it.each(["", "  ", "BRA", "B", "FR"])("rejects country %j", (c) => {
++    expect(thrown(() => validateCountry(c))).toMatchObject({ field: "country" });
++  });
++
++  it.each(["", "a@b", "@b.co", "a@.co", "a@b.", "a b@c.co", "a@b c.co", "a@@b.co", "ab.co"])(
++    "rejects email %j",
++    (e) => {
++      expect(thrown(() => normalizeEmail(e))).toMatchObject({ field: "email" });
++    },
++  );
++
++  it("accepts a minimal address", () => {
++    expect(normalizeEmail("a@b.c")).toBe("a@b.c");
++  });
+ });

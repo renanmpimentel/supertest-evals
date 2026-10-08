@@ -1,0 +1,40 @@
+diff --git a/payouts_test.go b/payouts_test.go
+index dbbf249..84d1fed 100644
+--- a/payouts_test.go
++++ b/payouts_test.go
+@@ -65,3 +65,35 @@ func TestFeeRejectsInvalidInput(t *testing.T) {
+ 		t.Errorf("Fee(1000, crypto) fee = %d, want 0 with an error", fee)
+ 	}
+ }
++
++func TestFeeRemainingBoundaries(t *testing.T) {
++	cases := []struct {
++		method string
++		amount int64
++		want   int64
++	}{
++		{"bank_transfer", 1, 150},
++		{"bank_transfer", 484_900, 4_999},
++		{"bank_transfer", 485_000, 5_000},
++		{"bank_transfer", MaxAmountCents, 5_000},
++		{"card", MaxAmountCents, 5_000},
++		{"card", 1, 50},
++		{"pix", 999_000, 4_995},
++		{"pix", 1_000_000, 5_000},
++	}
++	for _, c := range cases {
++		got, err := Fee(c.amount, c.method)
++		if err != nil || got != c.want {
++			t.Errorf("Fee(%d, %q) = %d, %v; want %d", c.amount, c.method, got, err, c.want)
++		}
++	}
++}
++
++func TestFeeUnknownMethodVariants(t *testing.T) {
++	for _, m := range []string{"", "PIX", "Card", " pix"} {
++		fee, err := Fee(1_000, m)
++		if err == nil || errors.Is(err, ErrInvalidAmount) || fee != 0 {
++			t.Errorf("Fee(1000, %q) = %d, %v; want 0 and unknown-method error", m, fee, err)
++		}
++	}
++}

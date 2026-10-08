@@ -1,0 +1,72 @@
+diff --git a/tests/profile.test.ts b/tests/profile.test.ts
+index 4ba06cb..8fd2a1f 100644
+--- a/tests/profile.test.ts
++++ b/tests/profile.test.ts
+@@ -121,3 +121,67 @@ describe("applyProfilePatch", () => {
+     expect(stored).toEqual(copy);
+   });
+ });
++
++describe("applyProfilePatch contract gaps", () => {
++  const full: BillingProfile = {
++    email: "billing@acme.test",
++    country: "DE",
++    companyName: "Acme Ltda",
++    taxId: "12.345",
++  };
++
++  it("keeps every stored value, including non-null optional text, for an empty patch", () => {
++    const result = applyProfilePatch(full, {});
++    expect(result).toEqual(full);
++    expect(result).not.toBe(full);
++  });
++
++  it("treats explicit undefined like an absent field", () => {
++    const patch = { email: undefined, country: undefined, companyName: undefined, taxId: undefined };
++    expect(applyProfilePatch(full, patch)).toEqual(full);
++  });
++
++  it("changes only the patched field", () => {
++    expect(applyProfilePatch(full, { companyName: "New" })).toEqual({ ...full, companyName: "New" });
++    expect(applyProfilePatch(full, { taxId: "9" })).toEqual({ ...full, taxId: "9" });
++    expect(applyProfilePatch(full, { country: "pt" })).toEqual({ ...full, country: "PT" });
++  });
++
++  it("accepts every supported country", () => {
++    for (const code of ["BR", "US", "PT", "DE"]) {
++      expect(validateCountry(code)).toBe(code);
++      expect(validateCountry(code.toLowerCase())).toBe(code);
++    }
++  });
++
++  it("rejects unsupported or blank countries with the country field", () => {
++    for (const bad of ["", "  ", "FR", "BRA", "B R"]) {
++      expect(thrown(() => validateCountry(bad))).toMatchObject({ field: "country" });
++    }
++  });
++
++  it("rejects malformed emails with the email field", () => {
++    for (const bad of ["", "   ", "a@b", "@b.co", "a@.co", "a@b.", "a b@c.co", "a@b c.co", "a.b.co", "a@@b.co"]) {
++      expect(thrown(() => normalizeEmail(bad)), bad).toMatchObject({ field: "email" });
++    }
++  });
++
++  it("accepts minimal valid emails", () => {
++    expect(normalizeEmail("a@b.c")).toBe("a@b.c");
++  });
++
++  it("does not return partial results or mutate stored when a later field is invalid", () => {
++    const copy = { ...full };
++    expect(() => applyProfilePatch(full, { email: "ok@acme.test", country: "XX" })).toThrow(ProfileError);
++    expect(full).toEqual(copy);
++  });
++
++  it("clears optional fields given tabs/newlines and trims inner-preserving text", () => {
++    expect(applyProfilePatch(full, { companyName: "\t\n", taxId: "" })).toEqual({
++      ...full,
++      companyName: null,
++      taxId: null,
++    });
++    expect(applyProfilePatch(full, { companyName: " A  B " }).companyName).toBe("A  B");
++  });
++});

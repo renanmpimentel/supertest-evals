@@ -1,0 +1,54 @@
+diff --git a/tests/profile.test.ts b/tests/profile.test.ts
+index 4ba06cb..bbac3e9 100644
+--- a/tests/profile.test.ts
++++ b/tests/profile.test.ts
+@@ -40,7 +40,23 @@ describe("normalizeEmail", () => {
+   });
+ });
+ 
++describe("normalizeEmail edge cases", () => {
++  it.each(["@acme.test", "a@.test", "a@b.", "a b@acme.test", "a@@b.test", ""])("rejects %j", (bad) => {
++    expect(() => normalizeEmail(bad)).toThrow(ProfileError);
++  });
++  it("accepts a minimal address", () => {
++    expect(normalizeEmail("a@b.c")).toBe("a@b.c");
++  });
++});
++
+ describe("validateCountry", () => {
++  it.each(["BR", "US", "PT", "DE"])("accepts %s", (c) => {
++    expect(validateCountry(c)).toBe(c);
++  });
++  it.each(["", "BRA", "GB"])("rejects %j", (c) => {
++    expect(() => validateCountry(c)).toThrow(ProfileError);
++  });
++
+   it("accepts supported codes in any case", () => {
+     expect(validateCountry(" pt ")).toBe("PT");
+   });
+@@ -120,4 +136,25 @@ describe("applyProfilePatch", () => {
+     applyProfilePatch(stored, { email: "finance@acme.test", taxId: "1" });
+     expect(stored).toEqual(copy);
+   });
++  it("keeps stored non-null optional fields and country when absent or undefined", () => {
++    const full = { email: "a@b.test", country: "DE", companyName: "Acme", taxId: "99" };
++    expect(applyProfilePatch(full, {})).toEqual(full);
++    expect(
++      applyProfilePatch(full, { email: undefined, country: undefined, companyName: undefined, taxId: undefined }),
++    ).toEqual(full);
++    expect(applyProfilePatch(full, { email: "x@y.test" })).toEqual({ ...full, email: "x@y.test" });
++    expect(applyProfilePatch(full, { country: "pt" })).toEqual({ ...full, country: "PT" });
++  });
++
++  it("reports the field and leaves nothing applied when a later field is invalid", () => {
++    const err = thrown(() => applyProfilePatch(stored, { email: "ok@acme.test", country: "XX" }));
++    expect(err).toMatchObject({ field: "country" });
++  });
++
++  it("does not return the stored object and does not mutate it with a full patch", () => {
++    const copy = { ...stored };
++    const out = applyProfilePatch(stored, { email: "n@acme.test", country: "us", companyName: "C", taxId: "1" });
++    expect(out).not.toBe(stored);
++    expect(stored).toEqual(copy);
++  });
+ });

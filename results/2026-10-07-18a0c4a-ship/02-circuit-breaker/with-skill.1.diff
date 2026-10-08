@@ -1,0 +1,103 @@
+diff --git a/tests/breaker.test.ts b/tests/breaker.test.ts
+index 9d2c6b9..df15c74 100644
+--- a/tests/breaker.test.ts
++++ b/tests/breaker.test.ts
+@@ -1,25 +1,85 @@
+ import { describe, expect, it } from "vitest";
+ import { FALLBACK_MESSAGE, GatewayBreaker } from "../src/breaker";
+ 
+-const unavailable = {
+-  async charge(): Promise<string> {
+-    throw new Error("Payment gateway unavailable");
+-  },
+-};
++function scripted(outcomes: Array<string | Error>) {
++  const calls: number[] = [];
++  return {
++    calls,
++    gateway: {
++      async charge(amount: number): Promise<string> {
++        calls.push(amount);
++        const next = outcomes.shift();
++        if (next === undefined) throw new Error("script exhausted");
++        if (next instanceof Error) throw next;
++        return next;
++      },
++    },
++  };
++}
++
++const boom = () => new Error("boom");
+ 
+ describe("GatewayBreaker", () => {
+-  it("returns the charge id when the gateway succeeds", async () => {
+-    const breaker = new GatewayBreaker({ charge: async () => "ch_1" }, 3);
++  it("returns the charge id and passes the amount when the gateway succeeds", async () => {
++    const s = scripted(["ch_1"]);
++    const breaker = new GatewayBreaker(s.gateway, 3);
+     expect(await breaker.charge(1000)).toEqual({ ok: true, chargeId: "ch_1" });
++    expect(s.calls).toEqual([1000]);
++  });
++
++  it("returns the gateway error message while the circuit is closed", async () => {
++    const s = scripted([boom()]);
++    const breaker = new GatewayBreaker(s.gateway, 3);
++    expect(await breaker.charge(1)).toEqual({ ok: false, message: "boom" });
++    expect(breaker.isOpen()).toBe(false);
+   });
+ 
+-  it("returns the fallback once the circuit is open", async () => {
+-    const breaker = new GatewayBreaker(unavailable, 3);
+-    for (let i = 0; i < 3; i += 1) {
+-      await breaker.charge(1000);
+-    }
++  it("stays closed below the threshold and opens exactly at it", async () => {
++    const s = scripted([boom(), boom(), boom()]);
++    const breaker = new GatewayBreaker(s.gateway, 3);
++    await breaker.charge(1);
++    await breaker.charge(1);
++    expect(breaker.isOpen()).toBe(false);
++    await breaker.charge(1);
+     expect(breaker.isOpen()).toBe(true);
+-    const result = await breaker.charge(1000);
++  });
++
++  it("does not call the gateway and returns the fallback once open", async () => {
++    const s = scripted([boom(), boom(), "ch_never"]);
++    const breaker = new GatewayBreaker(s.gateway, 2);
++    await breaker.charge(1);
++    await breaker.charge(1);
++    expect(s.calls).toHaveLength(2);
++    const result = await breaker.charge(1);
+     expect(result).toEqual({ ok: false, message: FALLBACK_MESSAGE });
++    expect(s.calls).toHaveLength(2);
++  });
++
++  it("respects a custom threshold of 1", async () => {
++    const s = scripted([boom()]);
++    const breaker = new GatewayBreaker(s.gateway, 1);
++    await breaker.charge(1);
++    expect(breaker.isOpen()).toBe(true);
++  });
++
++  it("uses a default threshold of 3", async () => {
++    const s = scripted([boom(), boom(), boom()]);
++    const breaker = new GatewayBreaker(s.gateway);
++    await breaker.charge(1);
++    await breaker.charge(1);
++    expect(breaker.isOpen()).toBe(false);
++    await breaker.charge(1);
++    expect(breaker.isOpen()).toBe(true);
++  });
++
++  it("resets the failure count on success so only consecutive failures open it", async () => {
++    const s = scripted([boom(), boom(), "ok", boom(), boom()]);
++    const breaker = new GatewayBreaker(s.gateway, 3);
++    await breaker.charge(1);
++    await breaker.charge(1);
++    expect(await breaker.charge(1)).toEqual({ ok: true, chargeId: "ok" });
++    await breaker.charge(1);
++    await breaker.charge(1);
++    expect(breaker.isOpen()).toBe(false);
+   });
+ });

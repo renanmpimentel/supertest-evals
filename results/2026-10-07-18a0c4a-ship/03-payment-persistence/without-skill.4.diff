@@ -1,0 +1,124 @@
+diff --git a/payments_test.go b/payments_test.go
+index 691f584..83e665e 100644
+--- a/payments_test.go
++++ b/payments_test.go
+@@ -1,6 +1,7 @@
+ package payments
+ 
+ import (
++	"database/sql"
+ 	"encoding/json"
+ 	"net/http"
+ 	"net/http/httptest"
+@@ -50,3 +51,111 @@ func TestCreatePaymentRejectsInvalidAmount(t *testing.T) {
+ 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadRequest)
+ 	}
+ }
++
++func newTestDB(t *testing.T) *sql.DB {
++	t.Helper()
++	db, err := OpenDB(filepath.Join(t.TempDir(), "payments.db"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	t.Cleanup(func() { db.Close() })
++	return db
++}
++
++func post(db *sql.DB, body string) *httptest.ResponseRecorder {
++	rec := httptest.NewRecorder()
++	req := httptest.NewRequest(http.MethodPost, "/payments", strings.NewReader(body))
++	(&Handler{DB: db}).ServeHTTP(rec, req)
++	return rec
++}
++
++func countPayments(t *testing.T, db *sql.DB) int {
++	t.Helper()
++	var n int
++	if err := db.QueryRow(`SELECT COUNT(*) FROM payments`).Scan(&n); err != nil {
++		t.Fatal(err)
++	}
++	return n
++}
++
++func TestCreatePaymentIsPersisted(t *testing.T) {
++	db := newTestDB(t)
++	rec := post(db, `{"amount_cents": 5000}`)
++	if rec.Code != http.StatusCreated {
++		t.Fatalf("status = %d, want 201", rec.Code)
++	}
++	var body createResponse
++	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
++		t.Fatal(err)
++	}
++	var amount int64
++	if err := db.QueryRow(`SELECT amount_cents FROM payments WHERE id = ?`, body.ID).Scan(&amount); err != nil {
++		t.Fatalf("payment %q not found in db: %v", body.ID, err)
++	}
++	if amount != 5000 {
++		t.Errorf("stored amount = %d, want 5000", amount)
++	}
++	if n := countPayments(t, db); n != 1 {
++		t.Errorf("rows = %d, want 1", n)
++	}
++}
++
++func TestCreatePaymentCommittedDurably(t *testing.T) {
++	path := filepath.Join(t.TempDir(), "payments.db")
++	db, err := OpenDB(path)
++	if err != nil {
++		t.Fatal(err)
++	}
++	rec := post(db, `{"amount_cents": 123}`)
++	if rec.Code != http.StatusCreated {
++		t.Fatalf("status = %d, want 201", rec.Code)
++	}
++	db.Close()
++
++	reopened, err := OpenDB(path)
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer reopened.Close()
++	if n := countPayments(t, reopened); n != 1 {
++		t.Errorf("rows after reopen = %d, want 1", n)
++	}
++}
++
++func TestCreatePaymentRejectsBadInputWithoutSaving(t *testing.T) {
++	cases := map[string]string{
++		"zero":       `{"amount_cents": 0}`,
++		"negative":   `{"amount_cents": -5}`,
++		"missing":    `{}`,
++		"malformed":  `{"amount_cents": `,
++		"not json":   `hello`,
++		"empty":      ``,
++		"string":     `{"amount_cents": "100"}`,
++		"fractional": `{"amount_cents": 1.5}`,
++		"null":       `{"amount_cents": null}`,
++	}
++	for name, body := range cases {
++		t.Run(name, func(t *testing.T) {
++			db := newTestDB(t)
++			rec := post(db, body)
++			if rec.Code != http.StatusBadRequest {
++				t.Errorf("status = %d, want 400", rec.Code)
++			}
++			if n := countPayments(t, db); n != 0 {
++				t.Errorf("rows = %d, want 0", n)
++			}
++		})
++	}
++}
++
++func TestCreatePaymentIDsAreUnique(t *testing.T) {
++	db := newTestDB(t)
++	for i := 0; i < 3; i++ {
++		if rec := post(db, `{"amount_cents": 1}`); rec.Code != http.StatusCreated {
++			t.Fatalf("status = %d, want 201", rec.Code)
++		}
++	}
++	if n := countPayments(t, db); n != 3 {
++		t.Errorf("rows = %d, want 3", n)
++	}
++}

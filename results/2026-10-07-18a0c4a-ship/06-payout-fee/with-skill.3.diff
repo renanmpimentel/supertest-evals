@@ -1,0 +1,20 @@
+diff --git a/payouts_test.go b/payouts_test.go
+index 6f25ecd..4e9039f 100644
+--- a/payouts_test.go
++++ b/payouts_test.go
+@@ -21,9 +21,15 @@ func TestFee(t *testing.T) {
+ 		{"rounds half up above minimum", "pix", 10_100, 51},
+ 		{"smallest amount", "pix", 1, 50},
+ 		{"minimum fee", "pix", 1_000, 50},
++		{"just below minimum is raised", "pix", 9_800, 50},
++		{"exactly minimum", "pix", 10_000, 50},
++		{"just above minimum", "pix", 10_300, 52},
++		{"card fixed fee raised to minimum", "card", 1, 50},
++		{"bank transfer at cap", "bank_transfer", 500_000_000, 5_000},
+ 		{"card just below cap", "card", 198_760, 4_999},
+ 		{"card at cap", "card", 198_800, 5_000},
+ 		{"card above cap", "card", 2_000_000, 5_000},
++		{"card one cent above cap", "card", 198_840, 5_000},
+ 		{"largest amount", "pix", 1_000_000_000_000, 5_000},
+ 	}
+ 	for _, c := range cases {

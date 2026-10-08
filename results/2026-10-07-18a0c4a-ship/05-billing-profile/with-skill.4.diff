@@ -1,0 +1,65 @@
+diff --git a/tests/profile.test.ts b/tests/profile.test.ts
+index 4ba06cb..95e2f88 100644
+--- a/tests/profile.test.ts
++++ b/tests/profile.test.ts
+@@ -120,4 +120,60 @@ describe("applyProfilePatch", () => {
+     applyProfilePatch(stored, { email: "finance@acme.test", taxId: "1" });
+     expect(stored).toEqual(copy);
+   });
++
++  describe("contract gaps", () => {
++    const full: BillingProfile = {
++      email: "billing@acme.test",
++      country: "DE",
++      companyName: "Acme Ltda",
++      taxId: "12.345",
++    };
++
++    it("keeps every stored value when the patch is empty", () => {
++      expect(applyProfilePatch(full, {})).toEqual(full);
++    });
++
++    it("keeps stored values for fields explicitly undefined", () => {
++      expect(
++        applyProfilePatch(full, { email: undefined, country: undefined, companyName: undefined, taxId: undefined }),
++      ).toEqual(full);
++    });
++
++    it("keeps stored optional values when only other fields are patched", () => {
++      expect(applyProfilePatch(full, { country: "us" })).toEqual({ ...full, country: "US" });
++      expect(applyProfilePatch(full, { companyName: null })).toEqual({ ...full, companyName: null });
++      expect(applyProfilePatch(full, { taxId: null })).toEqual({ ...full, taxId: null });
++    });
++
++    it("rejects blank or malformed emails in a patch", () => {
++      for (const email of ["", "   ", "a@b", "@b.co", "a@.co", "a b@c.co", "a@@b.co"]) {
++        expect(thrown(() => applyProfilePatch(full, { email })), email).toMatchObject({ field: "email" });
++      }
++    });
++
++    it("rejects blank country in a patch", () => {
++      expect(thrown(() => applyProfilePatch(full, { country: "" }))).toMatchObject({ field: "country" });
++    });
++  });
++
++  it.each(["BR", "US", "PT", "DE"])("accepts supported country %s", (code) => {
++    expect(validateCountry(code)).toBe(code);
++    expect(validateCountry(` ${code.toLowerCase()} `)).toBe(code);
++  });
++
++  it.each(["FR", "BRA", "B", "UK"])("rejects unsupported country %s", (code) => {
++    expect(thrown(() => validateCountry(code))).toMatchObject({ field: "country" });
++  });
++
++  it("accepts a plausible address", () => {
++    expect(normalizeEmail("a.b+c@sub.example.com")).toBe("a.b+c@sub.example.com");
++  });
++
++  it("does not return the stored object and leaves optional fields untouched", () => {
++    const full = { ...stored, companyName: "X", taxId: "1" };
++    const copy = { ...full };
++    const out = applyProfilePatch(full, { companyName: "Y" });
++    expect(out).not.toBe(full);
++    expect(full).toEqual(copy);
++  });
+ });

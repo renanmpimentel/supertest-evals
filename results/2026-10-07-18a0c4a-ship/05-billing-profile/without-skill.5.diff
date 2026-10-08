@@ -1,0 +1,60 @@
+diff --git a/tests/profile.test.ts b/tests/profile.test.ts
+index 4ba06cb..2336300 100644
+--- a/tests/profile.test.ts
++++ b/tests/profile.test.ts
+@@ -120,4 +120,55 @@ describe("applyProfilePatch", () => {
+     applyProfilePatch(stored, { email: "finance@acme.test", taxId: "1" });
+     expect(stored).toEqual(copy);
+   });
++
++  describe("absent or undefined fields", () => {
++    const full: BillingProfile = {
++      email: "billing@acme.test",
++      country: "DE",
++      companyName: "Acme Ltda",
++      taxId: "12.345",
++    };
++
++    it("keeps every stored value for an empty patch", () => {
++      expect(applyProfilePatch(full, {})).toEqual(full);
++    });
++
++    it("keeps stored values for fields explicitly undefined", () => {
++      expect(
++        applyProfilePatch(full, { email: undefined, country: undefined, companyName: undefined, taxId: undefined }),
++      ).toEqual(full);
++    });
++
++    it("keeps non-null optional fields when only another field changes", () => {
++      expect(applyProfilePatch(full, { country: "us" })).toEqual({ ...full, country: "US" });
++    });
++
++    it("returns a new object", () => {
++      expect(applyProfilePatch(full, {})).not.toBe(full);
++    });
++  });
++
++  it("accepts every supported country", () => {
++    for (const c of ["BR", "US", "PT", "DE"]) {
++      expect(applyProfilePatch(stored, { country: c }).country).toBe(c);
++    }
++  });
++
++  it("rejects blank email and country instead of clearing them", () => {
++    expect(thrown(() => applyProfilePatch(stored, { email: "  " }))).toMatchObject({ field: "email" });
++    expect(thrown(() => applyProfilePatch(stored, { country: "" }))).toMatchObject({ field: "country" });
++  });
++
++  it("does not partially apply a patch when a later field is invalid", () => {
++    const copy = { ...stored };
++    expect(() => applyProfilePatch(stored, { email: "ok@acme.test", country: "XX" })).toThrow(ProfileError);
++    expect(stored).toEqual(copy);
++  });
++
++  it("does not mutate stored when clearing or replacing optional fields", () => {
++    const withCompany = { ...stored, companyName: "Acme", taxId: "1" };
++    const copy = { ...withCompany };
++    applyProfilePatch(withCompany, { companyName: null, taxId: " 2 " });
++    expect(withCompany).toEqual(copy);
++  });
+ });

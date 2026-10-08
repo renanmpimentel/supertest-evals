@@ -1,0 +1,42 @@
+diff --git a/tests/profile.test.ts b/tests/profile.test.ts
+index 4ba06cb..7f93720 100644
+--- a/tests/profile.test.ts
++++ b/tests/profile.test.ts
+@@ -115,6 +115,37 @@ describe("applyProfilePatch", () => {
+     });
+   });
+ 
++  it("keeps populated stored values for every absent field", () => {
++    const full: BillingProfile = { email: "a@b.test", country: "DE", companyName: "Acme", taxId: "9" };
++    expect(applyProfilePatch(full, {})).toEqual(full);
++    expect(applyProfilePatch(full, { country: "us" })).toEqual({ ...full, country: "US" });
++    expect(applyProfilePatch(full, { email: "c@d.test" })).toEqual({ ...full, email: "c@d.test" });
++  });
++
++  it("treats explicit undefined like an absent field", () => {
++    const full: BillingProfile = { email: "a@b.test", country: "DE", companyName: "Acme", taxId: "9" };
++    expect(
++      applyProfilePatch(full, { email: undefined, country: undefined, companyName: undefined, taxId: undefined }),
++    ).toEqual(full);
++  });
++
++  it("does not validate or alter stored values that are not patched", () => {
++    const odd = { ...stored, email: "Legacy", country: "xx" };
++    expect(applyProfilePatch(odd, { taxId: "1" })).toEqual({ ...odd, taxId: "1" });
++  });
++
++  it("rejects blank email and blank country rather than keeping the stored value", () => {
++    expect(thrown(() => applyProfilePatch(stored, { email: "  " }))).toMatchObject({ field: "email" });
++    expect(thrown(() => applyProfilePatch(stored, { country: "" }))).toMatchObject({ field: "country" });
++  });
++
++  it("returns a new object and does not mutate the stored profile on failure", () => {
++    const copy = { ...stored };
++    expect(applyProfilePatch(stored, {})).not.toBe(stored);
++    expect(() => applyProfilePatch(stored, { email: "bad" })).toThrow(ProfileError);
++    expect(stored).toEqual(copy);
++  });
++
+   it("does not modify the stored profile", () => {
+     const copy = { ...stored };
+     applyProfilePatch(stored, { email: "finance@acme.test", taxId: "1" });
