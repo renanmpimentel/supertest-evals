@@ -1,0 +1,51 @@
+diff --git a/tests/test_charge.py b/tests/test_charge.py
+index c194a06..f176042 100644
+--- a/tests/test_charge.py
++++ b/tests/test_charge.py
+@@ -2,19 +2,39 @@ from app.payments import ChargeService
+ 
+ 
+ class FakeGateway:
++    def __init__(self):
++        self.calls = []
++
+     def charge(self, amount_cents):
+-        return f"ch_{amount_cents}"
++        self.calls.append(amount_cents)
++        return f"ch_{len(self.calls)}"
+ 
+ 
+ def test_charge_succeeds():
+-    service = ChargeService(FakeGateway())
++    gateway = FakeGateway()
++    service = ChargeService(gateway)
+     result = service.charge("key-1", 5000)
+-    assert result == {"id": "ch_5000", "amount_cents": 5000, "status": "succeeded"}
++    assert result == {"id": "ch_1", "amount_cents": 5000, "status": "succeeded"}
++    assert gateway.calls == [5000]
+ 
+ 
+-def test_same_key_returns_same_charge():
+-    service = ChargeService(FakeGateway())
++def test_same_key_charges_gateway_once_and_returns_same_charge():
++    gateway = FakeGateway()
++    service = ChargeService(gateway)
+     first = service.charge("key-1", 5000)
+     second = service.charge("key-1", 5000)
+-    assert second["status"] == "succeeded"
+-    assert second["id"] == first["id"]
++    assert gateway.calls == [5000]
++    assert second == first
++    assert second["id"] == "ch_1"
++
++
++def test_different_keys_create_different_charges():
++    gateway = FakeGateway()
++    service = ChargeService(gateway)
++    first = service.charge("key-1", 5000)
++    second = service.charge("key-2", 700)
++    assert gateway.calls == [5000, 700]
++    assert first["id"] != second["id"]
++    assert second == {"id": "ch_2", "amount_cents": 700, "status": "succeeded"}
++    assert service.charge("key-1", 5000) == first
++    assert gateway.calls == [5000, 700]

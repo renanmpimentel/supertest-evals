@@ -1,0 +1,11 @@
+case,kind,arm,run,verdict,verdict_ok,fix_check,prod_intact,test_lines,skill_loaded,cost_usd,turns,seconds
+07-cashback,gap,with-skill,1,inadequate,yes,fail,yes,10,yes,0.15846280000000001,10,60
+07-cashback,gap,with-skill,10,adequate,no,fail,yes,0,yes,0.1649682,11,61
+07-cashback,gap,with-skill,2,adequate,no,fail,yes,0,yes,0.11414180000000002,8,55
+07-cashback,gap,with-skill,3,inadequate,yes,fail,yes,10,yes,0.18765959999999998,12,72
+07-cashback,gap,with-skill,4,adequate,no,fail,yes,0,yes,0.1136234,9,50
+07-cashback,gap,with-skill,5,adequate,no,fail,yes,0,yes,0.12233939999999999,9,43
+07-cashback,gap,with-skill,6,inadequate,yes,fail,yes,31,yes,0.139607,9,56
+07-cashback,gap,with-skill,7,adequate,no,fail,yes,0,yes,0.1274532,8,39
+07-cashback,gap,with-skill,8,adequate,no,fail,yes,0,yes,0.16054160000000006,12,56
+07-cashback,gap,with-skill,9,adequate,no,fail,yes,0,yes,0.1385244,10,43

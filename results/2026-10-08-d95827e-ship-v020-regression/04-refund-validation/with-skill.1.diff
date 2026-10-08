@@ -1,0 +1,44 @@
+diff --git a/tests/test_refunds.py b/tests/test_refunds.py
+index 5a7084e..595c08f 100644
+--- a/tests/test_refunds.py
++++ b/tests/test_refunds.py
+@@ -47,10 +47,36 @@ def test_rejects_amount_above_refundable():
+     assert error.value.code == "exceeds_refundable"
+ 
+ 
++def expect_code(payment, amount, now, code):
++    with pytest.raises(RefundError) as error:
++        validate_refund(payment, amount, now)
++    assert error.value.code == code
++
++
++DEADLINE = datetime(2026, 3, 31, 12, 0, 0)
++
++
+ def test_rejects_refund_after_window():
+-    payment = Payment("pay_3", "authorized", 10_000, 0, CAPTURED_AT)
+-    with pytest.raises(RefundError):
+-        validate_refund(payment, 1_000, CAPTURED_AT + timedelta(days=31))
++    expect_code(captured(), 1_000, CAPTURED_AT + timedelta(days=31), "window_expired")
++
++
++def test_window_boundary_is_inclusive():
++    assert validate_refund(captured(), 1_000, DEADLINE - timedelta(seconds=1)) == 1_000
++    assert validate_refund(captured(), 1_000, DEADLINE) == 1_000
++    expect_code(captured(), 1_000, DEADLINE + timedelta(seconds=1), "window_expired")
++
++
++def test_smallest_positive_amount_is_accepted():
++    assert validate_refund(captured(), 1, CAPTURED_AT) == 1
++
++
++def test_amount_equal_to_refundable_is_accepted_and_one_more_rejected():
++    assert validate_refund(captured(), 10_000, CAPTURED_AT) == 10_000
++    expect_code(captured(), 10_001, CAPTURED_AT, "exceeds_refundable")
++
++
++def test_fully_refunded_payment_rejects_any_refund():
++    expect_code(captured(refunded_cents=10_000), 1, CAPTURED_AT, "exceeds_refundable")
+ 
+ 
+ @pytest.mark.parametrize("status", ["refunded", "voided"])

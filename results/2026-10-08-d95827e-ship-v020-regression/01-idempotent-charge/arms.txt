@@ -1,0 +1,3 @@
+with-skill.1 /tmp/tmp.RMgOY5vti8/project
+with-skill.3 /tmp/tmp.HSiL4Iyf2S/project
+with-skill.2 /tmp/tmp.WDUOm3MUWP/project

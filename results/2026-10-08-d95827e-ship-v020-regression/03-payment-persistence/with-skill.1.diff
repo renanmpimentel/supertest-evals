@@ -1,0 +1,114 @@
+diff --git a/payments_test.go b/payments_test.go
+index 691f584..55b857e 100644
+--- a/payments_test.go
++++ b/payments_test.go
+@@ -1,6 +1,7 @@
+ package payments
+ 
+ import (
++	"database/sql"
+ 	"encoding/json"
+ 	"net/http"
+ 	"net/http/httptest"
+@@ -50,3 +51,101 @@ func TestCreatePaymentRejectsInvalidAmount(t *testing.T) {
+ 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadRequest)
+ 	}
+ }
++
++func newTestDB(t *testing.T, path string) *Handler {
++	t.Helper()
++	db, err := OpenDB(path)
++	if err != nil {
++		t.Fatal(err)
++	}
++	t.Cleanup(func() { db.Close() })
++	return &Handler{DB: db}
++}
++
++// countPayments reads through an independent connection, so only committed rows are visible.
++func countPayments(t *testing.T, path string) int {
++	t.Helper()
++	db, err := sql.Open("sqlite", path)
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer db.Close()
++	var n int
++	if err := db.QueryRow(`SELECT COUNT(*) FROM payments`).Scan(&n); err != nil {
++		t.Fatal(err)
++	}
++	return n
++}
++
++func post(h *Handler, body string) *httptest.ResponseRecorder {
++	rec := httptest.NewRecorder()
++	h.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/payments", strings.NewReader(body)))
++	return rec
++}
++
++func TestCreatePaymentIsCommittedToDatabase(t *testing.T) {
++	path := filepath.Join(t.TempDir(), "payments.db")
++	h := newTestDB(t, path)
++
++	rec := post(h, `{"amount_cents": 5000}`)
++	if rec.Code != http.StatusCreated {
++		t.Fatalf("status = %d, want 201", rec.Code)
++	}
++	var body createResponse
++	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
++		t.Fatal(err)
++	}
++
++	reader, err := sql.Open("sqlite", path)
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer reader.Close()
++	var amount int64
++	if err := reader.QueryRow(`SELECT amount_cents FROM payments WHERE id = ?`, body.ID).Scan(&amount); err != nil {
++		t.Fatalf("payment %q not found after 201: %v", body.ID, err)
++	}
++	if amount != 5000 {
++		t.Errorf("stored amount = %d, want 5000", amount)
++	}
++}
++
++func TestCreatePaymentAmountBoundary(t *testing.T) {
++	cases := []struct {
++		body string
++		code int
++		rows int
++	}{
++		{`{"amount_cents": -1}`, http.StatusBadRequest, 0},
++		{`{"amount_cents": 0}`, http.StatusBadRequest, 0},
++		{`{"amount_cents": 1}`, http.StatusCreated, 1},
++		{`{"amount_cents": 2}`, http.StatusCreated, 1},
++	}
++	for _, c := range cases {
++		t.Run(c.body, func(t *testing.T) {
++			path := filepath.Join(t.TempDir(), "payments.db")
++			h := newTestDB(t, path)
++			if rec := post(h, c.body); rec.Code != c.code {
++				t.Fatalf("status = %d, want %d", rec.Code, c.code)
++			}
++			if n := countPayments(t, path); n != c.rows {
++				t.Errorf("rows = %d, want %d", n, c.rows)
++			}
++		})
++	}
++}
++
++func TestCreatePaymentRejectsInvalidBodyWithoutSaving(t *testing.T) {
++	for _, body := range []string{``, `not json`, `{"amount_cents": "5"}`, `{}`, `{"amount_cents": 1.5}`} {
++		t.Run(body, func(t *testing.T) {
++			path := filepath.Join(t.TempDir(), "payments.db")
++			h := newTestDB(t, path)
++			if rec := post(h, body); rec.Code != http.StatusBadRequest {
++				t.Fatalf("status = %d, want 400", rec.Code)
++			}
++			if n := countPayments(t, path); n != 0 {
++				t.Errorf("rows = %d, want 0", n)
++			}
++		})
++	}
++}

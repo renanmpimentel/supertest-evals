@@ -1,0 +1,52 @@
+diff --git a/tests/test_refunds.py b/tests/test_refunds.py
+index 5a7084e..b65ec9a 100644
+--- a/tests/test_refunds.py
++++ b/tests/test_refunds.py
+@@ -48,9 +48,44 @@ def test_rejects_amount_above_refundable():
+ 
+ 
+ def test_rejects_refund_after_window():
+-    payment = Payment("pay_3", "authorized", 10_000, 0, CAPTURED_AT)
+-    with pytest.raises(RefundError):
+-        validate_refund(payment, 1_000, CAPTURED_AT + timedelta(days=31))
++    with pytest.raises(RefundError) as error:
++        validate_refund(captured(), 1_000, CAPTURED_AT + timedelta(days=31))
++    assert error.value.code == "window_expired"
++
++
++def test_window_is_inclusive_of_thirty_days():
++    deadline = CAPTURED_AT + timedelta(days=30)
++    assert validate_refund(captured(), 1_000, deadline) == 1_000
++    assert validate_refund(captured(), 1_000, deadline - timedelta(microseconds=1)) == 1_000
++    with pytest.raises(RefundError) as error:
++        validate_refund(captured(), 1_000, deadline + timedelta(microseconds=1))
++    assert error.value.code == "window_expired"
++
++
++def test_accepts_smallest_positive_amount():
++    assert validate_refund(captured(), 1, CAPTURED_AT) == 1
++
++
++def test_rejects_one_cent_above_refundable_on_fresh_payment():
++    with pytest.raises(RefundError) as error:
++        validate_refund(captured(), 10_001, CAPTURED_AT)
++    assert error.value.code == "exceeds_refundable"
++
++
++def test_fully_refunded_payment_rejects_any_refund():
++    with pytest.raises(RefundError) as error:
++        validate_refund(captured(refunded_cents=10_000), 1, CAPTURED_AT)
++    assert error.value.code == "exceeds_refundable"
++
++
++def test_rule_precedence_when_several_rules_are_broken():
++    late = CAPTURED_AT + timedelta(days=60)
++    with pytest.raises(RefundError) as error:
++        validate_refund(captured(), 20_000, late)
++    assert error.value.code == "exceeds_refundable"
++    with pytest.raises(RefundError) as error:
++        validate_refund(captured(), 0, late)
++    assert error.value.code == "invalid_amount"
+ 
+ 
+ @pytest.mark.parametrize("status", ["refunded", "voided"])

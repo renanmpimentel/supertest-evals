@@ -1,0 +1,38 @@
+diff --git a/tests/profile.test.ts b/tests/profile.test.ts
+index 4ba06cb..e2e0f62 100644
+--- a/tests/profile.test.ts
++++ b/tests/profile.test.ts
+@@ -120,4 +120,33 @@ describe("applyProfilePatch", () => {
+     applyProfilePatch(stored, { email: "finance@acme.test", taxId: "1" });
+     expect(stored).toEqual(copy);
+   });
++
++  it("keeps stored optional values when absent or undefined", () => {
++    const withCompany = { ...stored, companyName: "Acme Ltda", taxId: "12.345" };
++    expect(applyProfilePatch(withCompany, { email: "finance@acme.test" })).toEqual({
++      ...withCompany,
++      email: "finance@acme.test",
++    });
++    expect(
++      applyProfilePatch(withCompany, {
++        email: undefined,
++        country: undefined,
++        companyName: undefined,
++        taxId: undefined,
++      }),
++    ).toEqual(withCompany);
++  });
++});
++
++describe("accepted and rejected values", () => {
++  it.each(["BR", "US", "PT", "DE"])("accepts country %s", (code) => {
++    expect(validateCountry(code)).toBe(code);
++  });
++
++  it.each(["with space@acme.test", "billing@ac me.test", "@acme.test", "billing@.test", "billing@acme."])(
++    "rejects email %j",
++    (email) => {
++      expect(thrown(() => normalizeEmail(email))).toMatchObject({ field: "email" });
++    },
++  );
+ });

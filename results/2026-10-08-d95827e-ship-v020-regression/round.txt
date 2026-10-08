@@ -1,0 +1,3 @@
+date=2026-10-08T07:55:05-03:00 supertest=d95827e model=sonnet repeats=3 prompt=ship arms=with-skill
+claude=2.1.286 (Claude Code)
+cases=01-idempotent-charge 02-circuit-breaker 03-payment-persistence 04-refund-validation 05-billing-profile 06-payout-fee

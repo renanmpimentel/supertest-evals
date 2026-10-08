@@ -1,0 +1,43 @@
+diff --git a/tests/profile.test.ts b/tests/profile.test.ts
+index 4ba06cb..925dc1c 100644
+--- a/tests/profile.test.ts
++++ b/tests/profile.test.ts
+@@ -31,6 +31,9 @@ describe("normalizeEmail", () => {
+   it("rejects malformed addresses", () => {
+     expect(() => normalizeEmail("billing@acme")).toThrow(ProfileError);
+     expect(() => normalizeEmail("not an email")).toThrow(/invalid email/);
++    expect(() => normalizeEmail("a b@acme.test")).toThrow(ProfileError);
++    expect(() => normalizeEmail("@acme.test")).toThrow(ProfileError);
++    expect(() => normalizeEmail("acme.test")).toThrow(ProfileError);
+   });
+ 
+   it("reports the email field on rejection", () => {
+@@ -43,6 +46,8 @@ describe("normalizeEmail", () => {
+ describe("validateCountry", () => {
+   it("accepts supported codes in any case", () => {
+     expect(validateCountry(" pt ")).toBe("PT");
++    for (const code of ["BR", "US", "PT", "DE"]) expect(validateCountry(code)).toBe(code);
++    expect(validateCountry("de")).toBe("DE");
+   });
+ 
+   it("rejects unsupported countries", () => {
+@@ -115,6 +120,19 @@ describe("applyProfilePatch", () => {
+     });
+   });
+ 
++  it("keeps stored values of every field absent from the patch", () => {
++    const full = { email: "a@acme.test", country: "DE", companyName: "Acme", taxId: "99" };
++    expect(applyProfilePatch(full, {})).toEqual(full);
++    expect(applyProfilePatch(full, { email: "b@acme.test" })).toEqual({ ...full, email: "b@acme.test" });
++  });
++
++  it("treats explicit undefined like an absent field", () => {
++    const full = { email: "a@acme.test", country: "DE", companyName: "Acme", taxId: "99" };
++    expect(
++      applyProfilePatch(full, { email: undefined, country: undefined, companyName: undefined, taxId: undefined }),
++    ).toEqual(full);
++  });
++
+   it("does not modify the stored profile", () => {
+     const copy = { ...stored };
+     applyProfilePatch(stored, { email: "finance@acme.test", taxId: "1" });

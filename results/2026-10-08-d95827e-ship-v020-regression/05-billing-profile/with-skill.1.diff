@@ -1,0 +1,27 @@
+diff --git a/tests/profile.test.ts b/tests/profile.test.ts
+index 4ba06cb..434c84f 100644
+--- a/tests/profile.test.ts
++++ b/tests/profile.test.ts
+@@ -121,3 +121,22 @@ describe("applyProfilePatch", () => {
+     expect(stored).toEqual(copy);
+   });
+ });
++
++describe("contract gaps", () => {
++  it("keeps stored non-null optional fields when absent or undefined", () => {
++    const withCompany = { ...stored, companyName: "Acme Ltda", taxId: "12.345" };
++    expect(applyProfilePatch(withCompany, { email: "a@b.co" })).toEqual({ ...withCompany, email: "a@b.co" });
++    expect(applyProfilePatch(withCompany, { companyName: undefined, taxId: undefined })).toEqual(withCompany);
++  });
++
++  it.each(["BR", "US", "PT", "DE", " de "])("accepts country %s", (code) => {
++    expect(validateCountry(code)).toBe(code.trim().toUpperCase());
++  });
++
++  it.each(["@acme.test", "billing@.test", "billing@acme.", "billing@@acme.test", "a b@acme.test", "xbilling@acme", "billing@acme.test\n x"])(
++    "rejects malformed email %j",
++    (bad) => {
++      expect(() => normalizeEmail(bad)).toThrow(ProfileError);
++    },
++  );
++});
